@@ -1,0 +1,42 @@
+[
+    {
+        "date": "2025-05-01",
+        "raw_text": "Ran 3 miles in 30 minutes, did 3 sets of 10 pushups.",
+        "entries": [
+            { "type": "cardio", "exercise": "running", "distance": 3.0, "duration": 30 },
+            { "type": "strength", "exercise": "pushups", "sets": 3, "reps": 10 }
+        ]
+    },
+    {
+        "date": "2025-05-02",
+        "raw_text": "Cycled 15 miles in 45 minutes, did 4 sets of 12 squats.",
+        "entries": [
+            { "type": "cardio", "exercise": "cycling", "distance": 15.0, "duration": 45 },
+            { "type": "strength", "exercise": "squats", "sets": 4, "reps": 12 }
+        ]
+    },
+    {
+        "date": "2025-05-03",
+        "raw_text": "5 miles running in 50 minutes, 3 sets of 8 pullups.",
+        "entries": [
+            { "type": "cardio", "exercise": "running", "distance": 5.0, "duration": 50 },
+            { "type": "strength", "exercise": "pullups", "sets": 3, "reps": 8 }
+        ]
+    },
+    {
+        "date": "2025-05-04",
+        "raw_text": "Jump rope for 20 minutes, 5 sets of 5 deadlifts.",
+        "entries": [
+            { "type": "cardio", "exercise": "jump rope", "duration": 20 },
+            { "type": "strength", "exercise": "deadlifts", "sets": 5, "reps": 5 }
+        ]
+    },
+    {
+        "date": "2025-05-05",
+        "raw_text": "Swam for 40 minutes and ran 2 miles.",
+        "entries": [
+            { "type": "cardio", "exercise": "swimming", "duration": 40 },
+            { "type": "cardio", "exercise": "running", "distance": 2.0 }
+        ]
+    }
+]

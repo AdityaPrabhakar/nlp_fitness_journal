@@ -1,54 +1,42 @@
+# seed.py
+import json
+from init import create_app, db
 from models import WorkoutSession, WorkoutEntry
-from datetime import datetime
 
-def seed_test_data(db):
-    print("Seeding test data...")
 
-    # Clear existing data
-    db.session.query(WorkoutEntry).delete()
-    db.session.query(WorkoutSession).delete()
-    db.session.commit()
+def seed_test_data():
+    # Read data from the JSON file
+    with open('sample_sessions.json', 'r') as f:
+        sample_sessions = json.load(f)
 
-    sample_sessions = [
-        # (date, raw_text, entries)
-        ("2025-05-01", "Ran 3 miles in 30 minutes, did 3 sets of 10 pushups.", [
-            {"type": "cardio", "exercise": "running", "distance": 3.0, "duration": 30},
-            {"type": "strength", "exercise": "pushups", "sets": 3, "reps": 10},
-        ]),
-        ("2025-05-02", "Cycled 15 miles in 45 minutes, did 4 sets of 12 squats.", [
-            {"type": "cardio", "exercise": "cycling", "distance": 15.0, "duration": 45},
-            {"type": "strength", "exercise": "squats", "sets": 4, "reps": 12},
-        ]),
-        ("2025-05-03", "5 miles running in 50 minutes, 3 sets of 8 pullups.", [
-            {"type": "cardio", "exercise": "running", "distance": 5.0, "duration": 50},
-            {"type": "strength", "exercise": "pullups", "sets": 3, "reps": 8},
-        ]),
-        ("2025-05-04", "Jump rope for 20 minutes, 5 sets of 5 deadlifts.", [
-            {"type": "cardio", "exercise": "jump rope", "duration": 20},
-            {"type": "strength", "exercise": "deadlifts", "sets": 5, "reps": 5},
-        ]),
-        ("2025-05-05", "Swam for 40 minutes and ran 2 miles.", [
-            {"type": "cardio", "exercise": "swimming", "duration": 40},
-            {"type": "cardio", "exercise": "running", "distance": 2.0}
-        ])
-    ]
+    # Create Flask app context for this seeding operation
+    app = create_app()
 
-    for date, raw_text, entries in sample_sessions:
-        session = WorkoutSession(date=date, raw_text=raw_text)
-        db.session.add(session)
-        db.session.commit()  # Commit to get session ID
+    with app.app_context():
+        print("Dropping and creating the schema...")
+        db.drop_all()  # Drop all tables (to avoid duplicates)
+        db.create_all()  # Recreate schema
 
-        for e in entries:
-            entry = WorkoutEntry(
-                session_id=session.id,
-                type=e["type"],
-                exercise=e["exercise"],
-                duration=e.get("duration"),
-                distance=e.get("distance"),
-                sets=e.get("sets"),
-                reps=e.get("reps")
-            )
-            db.session.add(entry)
+        print("Seeding test data...")
 
-    db.session.commit()
-    print("Test data seeded successfully.")
+        # Iterate through sample_sessions and add them to the DB
+        for session_data in sample_sessions:
+            session = WorkoutSession(date=session_data["date"], raw_text=session_data["raw_text"])
+            db.session.add(session)
+            db.session.commit()  # Commit to get session ID
+
+            # Add entries to the session
+            for entry_data in session_data["entries"]:
+                entry = WorkoutEntry(
+                    session_id=session.id,
+                    type=entry_data["type"],
+                    exercise=entry_data["exercise"],
+                    duration=entry_data.get("duration"),
+                    distance=entry_data.get("distance"),
+                    sets=entry_data.get("sets"),
+                    reps=entry_data.get("reps")
+                )
+                db.session.add(entry)
+
+        db.session.commit()  # Commit all entries
+        print("Test data seeded successfully.")

@@ -1,19 +1,19 @@
+# app/__init__.py
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from dotenv import load_dotenv
-import os
 
 db = SQLAlchemy()
 
-def create_app():
-    load_dotenv()
-    ENV = os.getenv("ENV", "production")
-
+def create_app(config_override=None):
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        "sqlite:///test.db" if ENV == "testing" else "sqlite:///database.db"
-    )
+
+    # Default config (used in production or overridden)
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    # Apply external overrides (e.g., from app.py or tests)
+    if config_override:
+        app.config.update(config_override)
 
     db.init_app(app)
 
@@ -21,8 +21,5 @@ def create_app():
         import models
         import routes
         db.create_all()
-        if ENV == "testing":
-            from seed import seed_test_data
-            seed_test_data(db)
 
     return app
