@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fitness Journal</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -38,6 +40,9 @@
                                 {% if entry.distance %}{{ entry.distance }} mi{% endif %}
                                 {% if entry.duration %} ({{ entry.duration }} min){% endif %}
                             {% endif %}
+                            {% if entry.notes %}
+                                <br><em>📝 {{ entry.notes }}</em>
+                            {% endif %}
                         </li>
                     {% endfor %}
                 </ul>
@@ -60,7 +65,7 @@
     <div id="cardioLogsContainer">
         <h3>📄 Cardio Log Entries</h3>
         <table id="cardioLogTable">
-            <thead></thead>
+            <thead><tr><th>Date</th><th>Duration</th><th>Distance</th><th>Notes</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
@@ -77,7 +82,7 @@
     <div id="strengthLogsContainer">
         <h3>📄 Strength Log Entries</h3>
         <table id="strengthLogTable">
-            <thead></thead>
+            <thead><tr><th>Date</th><th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
@@ -187,22 +192,24 @@
         const tbody = table.querySelector("tbody");
 
         if (type === 'cardio') {
-            thead.innerHTML = "<tr><th>Date</th><th>Duration</th><th>Distance</th></tr>";
+            thead.innerHTML = "<tr><th>Date</th><th>Duration</th><th>Distance</th><th>Notes</th></tr>";
             tbody.innerHTML = data.map(entry =>
                 `<tr>
                     <td>${entry.date}</td>
                     <td>${entry.duration ?? '-'}</td>
                     <td>${entry.distance ?? '-'}</td>
+                    <td>${entry.notes ?? '-'}</td>
                 </tr>`
             ).join("");
         } else {
-            thead.innerHTML = "<tr><th>Date</th><th>Sets</th><th>Reps</th><th>Weight</th></tr>";
+            thead.innerHTML = "<tr><th>Date</th><th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th></tr>";
             tbody.innerHTML = data.map(entry =>
                 `<tr>
                     <td>${entry.date}</td>
                     <td>${entry.sets ?? '-'}</td>
                     <td>${entry.reps ?? '-'}</td>
                     <td>${entry.weight ?? '-'}</td>
+                    <td>${entry.notes ?? '-'}</td>
                 </tr>`
             ).join("");
         }

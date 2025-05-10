@@ -15,16 +15,26 @@ def index():
 
         try:
             structured_response = parse_workout(raw_text)
-            parsed = structured_response.get("entries", [])
+
+            entries = structured_response.get("entries", [])
+            notes = structured_response.get("notes", "")
+            print("Entries:", entries)
+            print("General Notes:", notes)
+
         except Exception as e:
             print("Error parsing:", e)
-            parsed = []
+            entries = []
+            notes = ""
 
-        session = WorkoutSession(date=now, raw_text=raw_text)
+        session = WorkoutSession(
+            date=now,
+            raw_text=raw_text,
+            notes=notes
+        )
         db.session.add(session)
         db.session.commit()
 
-        for item in parsed:
+        for item in entries:
             entry = WorkoutEntry.from_dict(item, session.id)
             db.session.add(entry)
 
@@ -41,6 +51,7 @@ def index():
         strength_exercises=[e[0] for e in strength_exercises]
     )
 
+
 @log_entry_bp.route("/api/logs/strength/<exercise>")
 def get_strength_logs(exercise):
     logs = (
@@ -48,7 +59,8 @@ def get_strength_logs(exercise):
             WorkoutEntry.sets,
             WorkoutEntry.reps,
             WorkoutEntry.weight,
-            WorkoutSession.date
+            WorkoutSession.date,
+            WorkoutEntry.notes
         )
         .join(WorkoutSession)
         .filter(WorkoutEntry.exercise == exercise)
@@ -61,7 +73,8 @@ def get_strength_logs(exercise):
             "date": log.date,
             "sets": log.sets,
             "reps": log.reps,
-            "weight": log.weight
+            "weight": log.weight,
+            "notes": log.notes
         }
         for log in logs
     ])
@@ -72,7 +85,8 @@ def get_cardio_logs(exercise):
         db.session.query(
             WorkoutSession.date,
             WorkoutEntry.duration,
-            WorkoutEntry.distance
+            WorkoutEntry.distance,
+            WorkoutEntry.notes
         )
         .join(WorkoutSession)
         .filter(
@@ -87,6 +101,7 @@ def get_cardio_logs(exercise):
         {
             "date": log.date,
             "duration": log.duration,
-            "distance": log.distance
+            "distance": log.distance,
+            "notes": log.notes
         } for log in logs
     ])

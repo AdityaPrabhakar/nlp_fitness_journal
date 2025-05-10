@@ -12,16 +12,19 @@ class WorkoutEntry(db.Model):
     sets = db.Column(db.Integer, nullable=True)
     reps = db.Column(db.Integer, nullable=True)
     weight = db.Column(db.Float, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
 
-    @classmethod
-    def from_dict(cls, data, session_id):
-        return cls(
+    @staticmethod
+    def from_dict(data, session_id):
+        return WorkoutEntry(
             session_id=session_id,
-            type=data.get("type"),
-            exercise=data.get("exercise"),
+            type=data["type"],
+            exercise=data["exercise"],
             duration=data.get("duration"),
             distance=data.get("distance"),
             sets=data.get("sets"),
             reps=data.get("reps"),
-            weight=data.get("weight")
+            weight=data.get("weight"),
+            notes=data.get("notes")
         )
+
