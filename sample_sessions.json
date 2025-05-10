@@ -1,42 +1,72 @@
 [
-    {
-        "date": "2025-05-01",
-        "raw_text": "Ran 3 miles in 30 minutes, did 3 sets of 10 pushups.",
-        "entries": [
-            { "type": "cardio", "exercise": "running", "distance": 3.0, "duration": 30 },
-            { "type": "strength", "exercise": "pushups", "sets": 3, "reps": 10 }
-        ]
-    },
-    {
-        "date": "2025-05-02",
-        "raw_text": "Cycled 15 miles in 45 minutes, did 4 sets of 12 squats.",
-        "entries": [
-            { "type": "cardio", "exercise": "cycling", "distance": 15.0, "duration": 45 },
-            { "type": "strength", "exercise": "squats", "sets": 4, "reps": 12 }
-        ]
-    },
-    {
-        "date": "2025-05-03",
-        "raw_text": "5 miles running in 50 minutes, 3 sets of 8 pullups.",
-        "entries": [
-            { "type": "cardio", "exercise": "running", "distance": 5.0, "duration": 50 },
-            { "type": "strength", "exercise": "pullups", "sets": 3, "reps": 8 }
-        ]
-    },
-    {
-        "date": "2025-05-04",
-        "raw_text": "Jump rope for 20 minutes, 5 sets of 5 deadlifts.",
-        "entries": [
-            { "type": "cardio", "exercise": "jump rope", "duration": 20 },
-            { "type": "strength", "exercise": "deadlifts", "sets": 5, "reps": 5 }
-        ]
-    },
-    {
-        "date": "2025-05-05",
-        "raw_text": "Swam for 40 minutes and ran 2 miles.",
-        "entries": [
-            { "type": "cardio", "exercise": "swimming", "duration": 40 },
-            { "type": "cardio", "exercise": "running", "distance": 2.0 }
-        ]
-    }
+  {
+    "date": "2025-04-21",
+    "raw_text": "Ran 3.5 miles in 32 minutes. Did 4 sets of 8 barbell squats at 185 lbs and 3 sets of 10 pushups.",
+    "entries": [
+      {"type": "cardio", "exercise": "running", "distance": 3.5, "duration": 32},
+      {"type": "strength", "exercise": "barbell squats", "sets": 4, "reps": 8, "weight": 185},
+      {"type": "strength", "exercise": "pushups", "sets": 3, "reps": 10}
+    ]
+  },
+  {
+    "date": "2025-04-23",
+    "raw_text": "Cycled 10 miles in 48 minutes. Did 3 sets of 6 deadlifts at 225 lbs and 3 sets of 12 lunges at 60 lbs.",
+    "entries": [
+      {"type": "cardio", "exercise": "cycling", "distance": 10.0, "duration": 48},
+      {"type": "strength", "exercise": "deadlifts", "sets": 3, "reps": 6, "weight": 225},
+      {"type": "strength", "exercise": "lunges", "sets": 3, "reps": 12, "weight": 60}
+    ]
+  },
+  {
+    "date": "2025-04-25",
+    "raw_text": "Ran 4 miles in 34 minutes. Did 5 sets of 5 bench press at 160 lbs and 3 sets of 15 crunches.",
+    "entries": [
+      {"type": "cardio", "exercise": "running", "distance": 4.0, "duration": 34},
+      {"type": "strength", "exercise": "bench press", "sets": 5, "reps": 5, "weight": 160},
+      {"type": "strength", "exercise": "crunches", "sets": 3, "reps": 15}
+    ]
+  },
+  {
+    "date": "2025-04-27",
+    "raw_text": "Cycled 12 miles in 50 minutes. Did 4 sets of 8 deadlifts at 235 lbs and 3 sets of 15 lunges at 70 lbs.",
+    "entries": [
+      {"type": "cardio", "exercise": "cycling", "distance": 12.0, "duration": 50},
+      {"type": "strength", "exercise": "deadlifts", "sets": 4, "reps": 8, "weight": 235},
+      {"type": "strength", "exercise": "lunges", "sets": 3, "reps": 15, "weight": 70}
+    ]
+  },
+  {
+    "date": "2025-04-29",
+    "raw_text": "Ran 5 miles in 39 minutes. Did 4 sets of 8 barbell squats at 195 lbs and 3 sets of 12 pushups.",
+    "entries": [
+      {"type": "cardio", "exercise": "running", "distance": 5.0, "duration": 39},
+      {"type": "strength", "exercise": "barbell squats", "sets": 4, "reps": 8, "weight": 195},
+      {"type": "strength", "exercise": "pushups", "sets": 3, "reps": 12}
+    ]
+  },
+  {
+    "date": "2025-05-01",
+    "raw_text": "Cycled 14 miles in 54 minutes. Did 5 sets of 5 bench press at 170 lbs.",
+    "entries": [
+      {"type": "cardio", "exercise": "cycling", "distance": 14.0, "duration": 54},
+      {"type": "strength", "exercise": "bench press", "sets": 5, "reps": 5, "weight": 170}
+    ]
+  },
+  {
+    "date": "2025-05-03",
+    "raw_text": "Ran 5.5 miles in 41 minutes. Did 5 sets of 6 barbell squats at 205 lbs and 4 sets of 10 pushups.",
+    "entries": [
+      {"type": "cardio", "exercise": "running", "distance": 5.5, "duration": 41},
+      {"type": "strength", "exercise": "barbell squats", "sets": 5, "reps": 6, "weight": 205},
+      {"type": "strength", "exercise": "pushups", "sets": 4, "reps": 10}
+    ]
+  },
+  {
+    "date": "2025-05-05",
+    "raw_text": "Cycled 15 miles in 56 minutes. Did 3 sets of 6 deadlifts at 245 lbs.",
+    "entries": [
+      {"type": "cardio", "exercise": "cycling", "distance": 15.0, "duration": 56},
+      {"type": "strength", "exercise": "deadlifts", "sets": 3, "reps": 6, "weight": 245}
+    ]
+  }
 ]

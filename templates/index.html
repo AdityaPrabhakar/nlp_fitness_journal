@@ -22,9 +22,10 @@
                         <li>
                             {{ entry.exercise }} —
                             {% if entry.type == 'strength' %}
-                                {{ entry.sets }} set(s) x {{ entry.reps }} rep(s)
+                                {{ entry.sets }}×{{ entry.reps }} reps
+                                {% if entry.weight %} @ {{ entry.weight }} lbs{% endif %}
                             {% elif entry.type == 'cardio' %}
-                                {% if entry.distance %}{{ entry.distance }} miles{% endif %}
+                                {% if entry.distance %}{{ entry.distance }} mi{% endif %}
                                 {% if entry.duration %} ({{ entry.duration }} min){% endif %}
                             {% endif %}
                         </li>
@@ -34,78 +35,140 @@
         {% endfor %}
     </ul>
 
-    <h2>📊 Cardio Progress</h2>
+    <h2>📊 Overall Cardio Progress</h2>
     <canvas id="cardioChart" height="100"></canvas>
 
+    <h2>📈 View Cardio Progress by Exercise</h2>
+    <select id="cardioSelect">
+        <option disabled selected>Select cardio exercise</option>
+        {% for exercise in cardio_exercises %}
+            <option value="{{ exercise }}">{{ exercise }}</option>
+        {% endfor %}
+    </select>
+    <canvas id="cardioExerciseChart" height="100"></canvas>
+
+    <h2>💪 View Strength Progress by Exercise</h2>
+    <select id="strengthSelect">
+        <option disabled selected>Select strength exercise</option>
+        {% for exercise in strength_exercises %}
+            <option value="{{ exercise }}">{{ exercise }}</option>
+        {% endfor %}
+    </select>
+    <canvas id="strengthExerciseChart" height="100"></canvas>
+
     <script>
+    // Function to destroy existing chart and load a new one
+    function destroyChart(chart) {
+        if (chart) {
+            chart.destroy();
+        }
+    }
+
+    // Load the cardio chart (overall)
     async function loadCardioChart() {
         const res = await fetch("/api/progress/cardio");
         const data = await res.json();
+        const ctx = document.getElementById('cardioChart').getContext('2d');
 
-        const dates = data.map(d => d.date);
-        const distances = data.map(d => d.distance || 0);
-        const durations = data.map(d => d.duration || 0);
-
-        new Chart(document.getElementById('cardioChart').getContext('2d'), {
+        new Chart(ctx, {
             type: 'line',
             data: {
-                labels: dates,
+                labels: data.map(d => d.date),
                 datasets: [
                     {
                         label: 'Distance (mi)',
-                        data: distances,
+                        data: data.map(d => d.distance || 0),
                         borderColor: 'blue',
                         yAxisID: 'y1',
-                        tension: 0.3,
-                        fill: false
+                        tension: 0.3
                     },
                     {
                         label: 'Duration (min)',
-                        data: durations,
+                        data: data.map(d => d.duration || 0),
                         borderColor: 'green',
                         yAxisID: 'y2',
-                        tension: 0.3,
-                        fill: false
+                        tension: 0.3
                     }
                 ]
             },
             options: {
-                responsive: true,
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Cardio Progress Over Time'
-                    }
-                },
                 scales: {
-                    y1: {
-                        type: 'linear',
-                        position: 'left',
-                        title: {
-                            display: true,
-                            text: 'Distance (mi)'
-                        }
-                    },
-                    y2: {
-                        type: 'linear',
-                        position: 'right',
-                        title: {
-                            display: true,
-                            text: 'Duration (min)'
-                        },
-                        grid: {
-                            drawOnChartArea: false
-                        }
-                    }
+                    y1: { type: 'linear', position: 'left' },
+                    y2: { type: 'linear', position: 'right', grid: { drawOnChartArea: false } }
                 }
             }
         });
     }
 
+    // Load the exercise chart (cardio or strength)
+    async function loadExerciseChart(type, exercise, canvasId) {
+        const res = await fetch(`/api/progress/${type}/${exercise}`);
+        const data = await res.json();
+        const ctx = document.getElementById(canvasId).getContext('2d');
+
+        // Destroy the previous chart
+        if (window[canvasId + 'Chart']) {
+            destroyChart(window[canvasId + 'Chart']);
+        }
+
+        const config = {
+            type: type === 'cardio' ? 'line' : 'bar',  // Cardio is line, Strength is bar
+            data: {
+                labels: data.map(d => d.date),
+                datasets: type === 'cardio' ? [
+                    {
+                        label: 'Distance (mi)',
+                        data: data.map(d => d.distance || 0),
+                        borderColor: 'purple',
+                        yAxisID: 'y1',
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Duration (min)',
+                        data: data.map(d => d.duration || 0),
+                        borderColor: 'orange',
+                        yAxisID: 'y2',
+                        tension: 0.3
+                    }
+                ] : [
+                    {
+                        label: 'Volume (sets × reps)',
+                        data: data.map(d => d.volume || 0),
+                        backgroundColor: 'red',
+                        yAxisID: 'y1',
+                        barThickness: 20
+                    },
+                    {
+                        label: 'Max Weight (lbs)',
+                        data: data.map(d => d.max_weight || 0),
+                        backgroundColor: 'blue',
+                        yAxisID: 'y2',
+                        barThickness: 20
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    y1: { type: 'linear', position: 'left' },
+                    y2: { type: 'linear', position: 'right', grid: { drawOnChartArea: false } }
+                }
+            }
+        };
+
+        // Create a new chart
+        window[canvasId + 'Chart'] = new Chart(ctx, config);
+    }
+
+    // Event listeners for dropdowns
+    document.getElementById("cardioSelect").addEventListener('change', function(event) {
+        loadExerciseChart('cardio', event.target.value, 'cardioExerciseChart');
+    });
+
+    document.getElementById("strengthSelect").addEventListener('change', function(event) {
+        loadExerciseChart('strength', event.target.value, 'strengthExerciseChart');
+    });
+
+    // Initial load for overall cardio chart
     loadCardioChart();
     </script>
 </body>

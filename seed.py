@@ -36,7 +36,8 @@ def seed_test_data():
                     duration=entry_data.get("duration"),
                     distance=entry_data.get("distance"),
                     sets=entry_data.get("sets"),
-                    reps=entry_data.get("reps")
+                    reps=entry_data.get("reps"),
+                    weight=entry_data.get("weight")
                 )
                 db.session.add(entry)
 
