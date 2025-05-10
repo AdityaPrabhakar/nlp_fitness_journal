@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fitness Journal</title>
+</head>
+<body>
+    <h1>📝 Natural Language Fitness Journal</h1>
+    <form method="POST">
+        <textarea name="entry" rows="4" cols="50" placeholder="Describe your workout..."></textarea><br>
+        <button type="submit">Log Workout</button>
+    </form>
+
+    <h2>📅 Logged Workouts</h2>
+    <ul>
+        {% for entry in entries %}
+            <li>
+                <strong>{{ entry.date }}</strong>: {{ entry.description }}
+                {% if entry.parsed_data.entries %}
+                    <ul>
+                        {% for item in entry.parsed_data.entries %}
+                            <li>
+                                {{ item.exercise }} —
+                                {% if item.type == 'strength' %}
+                                    {{ item.sets }} sets of {{ item.reps }} reps
+                                {% elif item.type == 'cardio' %}
+                                    {{ item.distance_miles }} miles
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% elif entry.parsed_data.error %}
+                    <em>Error: {{ entry.parsed_data.error }}</em>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
