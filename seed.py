@@ -1,5 +1,7 @@
 # seed.py
 import json
+
+from config import TestingConfig
 from init import create_app, db
 from models import WorkoutSession, WorkoutEntry
 
@@ -10,7 +12,7 @@ def seed_test_data():
         sample_sessions = json.load(f)
 
     # Create Flask app context for this seeding operation
-    app = create_app()
+    app = create_app(TestingConfig)
 
     with app.app_context():
         print("Dropping and creating the schema...")

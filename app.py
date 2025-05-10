@@ -1,24 +1,23 @@
 # app.py
 import os
-
 from dotenv import load_dotenv
-from init import create_app, db
+from init import create_app
 from seed import seed_test_data
+from config import CONFIG_MAP
 
 load_dotenv()
 
-ENV = os.getenv("ENV", "production")
+env = os.getenv("ENV", "standard").lower()
+config_class = CONFIG_MAP.get(env)
 
-# Override config if testing
-config_override = {}
-if ENV == "testing":
-    config_override["SQLALCHEMY_DATABASE_URI"] = "sqlite:///test.db"
+if not config_class:
+    raise ValueError(f"Unknown ENV '{env}' in .env")
 
-app = create_app(config_override)
+app = create_app(config_class)
 
-if ENV == "testing":
+if env == "testing":
     with app.app_context():
         seed_test_data()
 
 if __name__ == "__main__":
-    app.run(debug=(ENV != "production"))
+    app.run(debug=app.config.get("DEBUG", False))
