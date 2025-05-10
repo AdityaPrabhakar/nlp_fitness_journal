@@ -1,14 +1,8 @@
-# models.py
-from flask_sqlalchemy import SQLAlchemy
 from init import db
 
-class WorkoutSession(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.String, nullable=False)
-    raw_text = db.Column(db.Text, nullable=False)
-    entries = db.relationship('WorkoutEntry', backref='session', lazy=True)
-
 class WorkoutEntry(db.Model):
+    __tablename__ = "workout_entry"
+
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey('workout_session.id'), nullable=False)
     type = db.Column(db.String, nullable=False)
@@ -19,3 +13,15 @@ class WorkoutEntry(db.Model):
     reps = db.Column(db.Integer, nullable=True)
     weight = db.Column(db.Float, nullable=True)
 
+    @classmethod
+    def from_dict(cls, data, session_id):
+        return cls(
+            session_id=session_id,
+            type=data.get("type"),
+            exercise=data.get("exercise"),
+            duration=data.get("duration"),
+            distance=data.get("distance"),
+            sets=data.get("sets"),
+            reps=data.get("reps"),
+            weight=data.get("weight")
+        )

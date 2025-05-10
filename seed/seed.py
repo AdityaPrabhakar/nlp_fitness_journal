@@ -1,15 +1,28 @@
-# seed.py
 import json
-
+import os
 from config import TestingConfig
 from init import create_app, db
 from models import WorkoutSession, WorkoutEntry
+from dotenv import load_dotenv
+from flask import current_app
 
+# Load environment variables from .env file
+load_dotenv()
 
 def seed_test_data():
-    # Read data from the JSON file
-    with open('sample_sessions.json', 'r') as f:
-        sample_sessions = json.load(f)
+    # Get the path of the data file from the environment variable, with a fallback
+    data_file_path = current_app.config.get("SEED_DATA_FILE_PATH")
+
+    try:
+        # Read data from the JSON file
+        with open(data_file_path, 'r') as f:
+            sample_sessions = json.load(f)
+    except FileNotFoundError:
+        print(f"Error: The data file '{data_file_path}' was not found.")
+        return
+    except json.JSONDecodeError:
+        print(f"Error: The data file '{data_file_path}' is not a valid JSON file.")
+        return
 
     # Create Flask app context for this seeding operation
     app = create_app(TestingConfig)
@@ -29,16 +42,7 @@ def seed_test_data():
 
             # Add entries to the session
             for entry_data in session_data["entries"]:
-                entry = WorkoutEntry(
-                    session_id=session.id,
-                    type=entry_data["type"],
-                    exercise=entry_data["exercise"],
-                    duration=entry_data.get("duration"),
-                    distance=entry_data.get("distance"),
-                    sets=entry_data.get("sets"),
-                    reps=entry_data.get("reps"),
-                    weight=entry_data.get("weight")
-                )
+                entry = WorkoutEntry.from_dict(entry_data, session.id)
                 db.session.add(entry)
 
         db.session.commit()  # Commit all entries
