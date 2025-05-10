@@ -14,6 +14,7 @@ class WorkoutEntry(db.Model):
     session_id = db.Column(db.Integer, db.ForeignKey('workout_session.id'), nullable=False)
     type = db.Column(db.String, nullable=False)  # 'cardio' or 'strength'
     exercise = db.Column(db.String, nullable=False)
-    duration = db.Column(db.Float, nullable=True)  # minutes for cardio
+    duration = db.Column(db.Float, nullable=True)  # in minutes
+    distance = db.Column(db.Float, nullable=True)  # in miles or km
     sets = db.Column(db.Integer, nullable=True)
     reps = db.Column(db.Integer, nullable=True)

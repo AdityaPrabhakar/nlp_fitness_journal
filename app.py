@@ -22,29 +22,32 @@ with app.app_context():
 # noinspection PyTypeChecker
 def parse_workout(text):
     prompt = f"""
-    You are a fitness assistant. A user will describe their workout in natural language.
-    Your job is to convert it into a structured JSON object, following this exact format:
-    
+You are a fitness assistant. A user will describe their workout in natural language.
+Convert it into a strict JSON object with only the fields needed.
+
+Format:
+{{
+  "entries": [
     {{
-      "entries": [
-        {{
-          "type": "strength",
-          "exercise": "push-ups",
-          "sets": 3,
-          "reps": 10
-        }},
-        {{
-          "type": "cardio",
-          "exercise": "running",
-          "distance_miles": 2
-        }}
-      ]
+      "type": "strength",
+      "exercise": "squats",
+      "sets": 3,
+      "reps": 10
+    }},
+    {{
+      "type": "cardio",
+      "exercise": "running",
+      "duration": 30,
+      "distance": 3.0
     }}
-    
-    Only include keys that are relevant. Do not explain anything. Only return JSON.
-    
-    Workout: "{text}"
-    """
+  ]
+}}
+
+Only include keys that apply. Don't add nulls. Do not explain anything. Only return valid JSON.
+
+Workout: "{text}"
+"""
+
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -90,6 +93,7 @@ def index():
                 type=item.get("type"),
                 exercise=item.get("exercise"),
                 duration=item.get("duration"),
+                distance=item.get("distance"),
                 sets=item.get("sets"),
                 reps=item.get("reps")
             )

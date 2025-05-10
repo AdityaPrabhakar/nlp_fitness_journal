@@ -20,9 +20,10 @@
                         <li>
                             {{ entry.exercise }} —
                             {% if entry.type == 'strength' %}
-                                {{ entry.sets }} sets x {{ entry.reps }} reps
+                                {{ entry.sets }} set(s) x {{ entry.reps }} rep(s)
                             {% elif entry.type == 'cardio' %}
-                                {{ entry.duration }} minutes
+                                {% if entry.distance %}{{ entry.distance }} miles{% endif %}
+                                {% if entry.duration %} ({{ entry.duration }} min){% endif %}
                             {% endif %}
                         </li>
                     {% endfor %}
