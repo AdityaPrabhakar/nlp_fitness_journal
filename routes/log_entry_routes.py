@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, redirect
+from flask import Blueprint, request, render_template, redirect, jsonify
 from datetime import datetime
 from models import WorkoutSession
 from models import WorkoutEntry
@@ -40,3 +40,53 @@ def index():
         cardio_exercises=[e[0] for e in cardio_exercises],
         strength_exercises=[e[0] for e in strength_exercises]
     )
+
+@log_entry_bp.route("/api/logs/strength/<exercise>")
+def get_strength_logs(exercise):
+    logs = (
+        db.session.query(
+            WorkoutEntry.sets,
+            WorkoutEntry.reps,
+            WorkoutEntry.weight,
+            WorkoutSession.date
+        )
+        .join(WorkoutSession)
+        .filter(WorkoutEntry.exercise == exercise)
+        .order_by(WorkoutSession.date.desc())
+        .all()
+    )
+
+    return jsonify([
+        {
+            "date": log.date,
+            "sets": log.sets,
+            "reps": log.reps,
+            "weight": log.weight
+        }
+        for log in logs
+    ])
+
+@log_entry_bp.route("/api/logs/cardio/<exercise>")
+def get_cardio_logs(exercise):
+    logs = (
+        db.session.query(
+            WorkoutSession.date,
+            WorkoutEntry.duration,
+            WorkoutEntry.distance
+        )
+        .join(WorkoutSession)
+        .filter(
+            WorkoutEntry.type == 'cardio',
+            WorkoutEntry.exercise == exercise
+        )
+        .order_by(WorkoutSession.date.desc())
+        .all()
+    )
+
+    return jsonify([
+        {
+            "date": log.date,
+            "duration": log.duration,
+            "distance": log.distance
+        } for log in logs
+    ])

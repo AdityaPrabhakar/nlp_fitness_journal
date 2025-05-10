@@ -3,6 +3,16 @@
 <head>
     <title>Fitness Journal</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        table {
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+        }
+    </style>
 </head>
 <body>
     <h1>📝 Natural Language Fitness Journal</h1>
@@ -47,6 +57,14 @@
     </select>
     <canvas id="cardioExerciseChart" height="100"></canvas>
 
+    <div id="cardioLogsContainer">
+        <h3>📄 Cardio Log Entries</h3>
+        <table id="cardioLogTable">
+            <thead></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
     <h2>💪 View Strength Progress by Exercise</h2>
     <select id="strengthSelect">
         <option disabled selected>Select strength exercise</option>
@@ -56,15 +74,19 @@
     </select>
     <canvas id="strengthExerciseChart" height="100"></canvas>
 
+    <div id="strengthLogsContainer">
+        <h3>📄 Strength Log Entries</h3>
+        <table id="strengthLogTable">
+            <thead></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
     <script>
-    // Function to destroy existing chart and load a new one
     function destroyChart(chart) {
-        if (chart) {
-            chart.destroy();
-        }
+        if (chart) chart.destroy();
     }
 
-    // Load the cardio chart (overall)
     async function loadCardioChart() {
         const res = await fetch("/api/progress/cardio");
         const data = await res.json();
@@ -100,19 +122,17 @@
         });
     }
 
-    // Load the exercise chart (cardio or strength)
     async function loadExerciseChart(type, exercise, canvasId) {
         const res = await fetch(`/api/progress/${type}/${exercise}`);
         const data = await res.json();
         const ctx = document.getElementById(canvasId).getContext('2d');
 
-        // Destroy the previous chart
         if (window[canvasId + 'Chart']) {
             destroyChart(window[canvasId + 'Chart']);
         }
 
         const config = {
-            type: type === 'cardio' ? 'line' : 'bar',  // Cardio is line, Strength is bar
+            type: type === 'cardio' ? 'line' : 'bar',
             data: {
                 labels: data.map(d => d.date),
                 datasets: type === 'cardio' ? [
@@ -155,20 +175,51 @@
             }
         };
 
-        // Create a new chart
         window[canvasId + 'Chart'] = new Chart(ctx, config);
     }
 
-    // Event listeners for dropdowns
+    async function loadLogTable(type, exercise, tableId) {
+        const res = await fetch(`/api/logs/${type}/${exercise}`);
+        const data = await res.json();
+
+        const table = document.getElementById(tableId);
+        const thead = table.querySelector("thead");
+        const tbody = table.querySelector("tbody");
+
+        if (type === 'cardio') {
+            thead.innerHTML = "<tr><th>Date</th><th>Duration</th><th>Distance</th></tr>";
+            tbody.innerHTML = data.map(entry =>
+                `<tr>
+                    <td>${entry.date}</td>
+                    <td>${entry.duration ?? '-'}</td>
+                    <td>${entry.distance ?? '-'}</td>
+                </tr>`
+            ).join("");
+        } else {
+            thead.innerHTML = "<tr><th>Date</th><th>Sets</th><th>Reps</th><th>Weight</th></tr>";
+            tbody.innerHTML = data.map(entry =>
+                `<tr>
+                    <td>${entry.date}</td>
+                    <td>${entry.sets ?? '-'}</td>
+                    <td>${entry.reps ?? '-'}</td>
+                    <td>${entry.weight ?? '-'}</td>
+                </tr>`
+            ).join("");
+        }
+    }
+
     document.getElementById("cardioSelect").addEventListener('change', function(event) {
-        loadExerciseChart('cardio', event.target.value, 'cardioExerciseChart');
+        const exercise = event.target.value;
+        loadExerciseChart('cardio', exercise, 'cardioExerciseChart');
+        loadLogTable('cardio', exercise, 'cardioLogTable');
     });
 
     document.getElementById("strengthSelect").addEventListener('change', function(event) {
-        loadExerciseChart('strength', event.target.value, 'strengthExerciseChart');
+        const exercise = event.target.value;
+        loadExerciseChart('strength', exercise, 'strengthExerciseChart');
+        loadLogTable('strength', exercise, 'strengthLogTable');
     });
 
-    // Initial load for overall cardio chart
     loadCardioChart();
     </script>
 </body>
