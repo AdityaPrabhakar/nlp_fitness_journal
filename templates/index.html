@@ -2,9 +2,11 @@
 <html>
 <head>
     <title>Fitness Journal</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <h1>📝 Natural Language Fitness Journal</h1>
+
     <form method="POST">
         <textarea name="entry" rows="4" cols="50" placeholder="Describe your workout..."></textarea><br>
         <button type="submit">Log Workout</button>
@@ -31,5 +33,80 @@
             </li>
         {% endfor %}
     </ul>
+
+    <h2>📊 Cardio Progress</h2>
+    <canvas id="cardioChart" height="100"></canvas>
+
+    <script>
+    async function loadCardioChart() {
+        const res = await fetch("/api/progress/cardio");
+        const data = await res.json();
+
+        const dates = data.map(d => d.date);
+        const distances = data.map(d => d.distance || 0);
+        const durations = data.map(d => d.duration || 0);
+
+        new Chart(document.getElementById('cardioChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [
+                    {
+                        label: 'Distance (mi)',
+                        data: distances,
+                        borderColor: 'blue',
+                        yAxisID: 'y1',
+                        tension: 0.3,
+                        fill: false
+                    },
+                    {
+                        label: 'Duration (min)',
+                        data: durations,
+                        borderColor: 'green',
+                        yAxisID: 'y2',
+                        tension: 0.3,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Cardio Progress Over Time'
+                    }
+                },
+                scales: {
+                    y1: {
+                        type: 'linear',
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Distance (mi)'
+                        }
+                    },
+                    y2: {
+                        type: 'linear',
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Duration (min)'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    loadCardioChart();
+    </script>
 </body>
 </html>

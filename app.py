@@ -1,22 +1,114 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, jsonify
+from sqlalchemy import text
 from models import db, WorkoutSession, WorkoutEntry
 from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
 import json
+import os
+
 
 # Load .env variables
 load_dotenv()
 client = OpenAI()
 
+ENV = os.getenv("ENV", "production")
+
 # Initialize Flask app
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+if ENV == "testing":
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
+
+def seed_test_data():
+    print("Seeding test data...")
+
+    # Clear existing
+    db.session.query(WorkoutEntry).delete()
+    db.session.query(WorkoutSession).delete()
+    db.session.commit()
+
+    sample_sessions = [
+        ("2025-05-01", "Ran 3 miles in 30 minutes, did 3 sets of 10 pushups."),
+        ("2025-05-02", "Cycled for 45 minutes, 4 sets of 12 squats."),
+        ("2025-05-03", "5 miles running in 50 minutes, 3 sets of 8 pullups."),
+        ("2025-05-04", "Jump rope for 20 minutes, 5 sets of 5 deadlifts.")
+    ]
+
+    for date, raw_text in sample_sessions:
+        session = WorkoutSession(date=date, raw_text=raw_text)
+        db.session.add(session)
+        db.session.commit()
+
+        # Simulate parsed entries
+        if "ran" in raw_text.lower() or "running" in raw_text.lower():
+            db.session.add(WorkoutEntry(
+                session_id=session.id,
+                type="cardio",
+                exercise="running",
+                distance=3.0 if "3 miles" in raw_text else 5.0,
+                duration=30 if "30 minutes" in raw_text else 50
+            ))
+        if "cycled" in raw_text.lower():
+            db.session.add(WorkoutEntry(
+                session_id=session.id,
+                type="cardio",
+                exercise="cycling",
+                duration=45
+            ))
+        if "jump rope" in raw_text.lower():
+            db.session.add(WorkoutEntry(
+                session_id=session.id,
+                type="cardio",
+                exercise="jump rope",
+                duration=20
+            ))
+
+        if "pushups" in raw_text:
+            db.session.add(WorkoutEntry(
+                session_id=session.id,
+                type="strength",
+                exercise="pushups",
+                sets=3,
+                reps=10
+            ))
+        if "squats" in raw_text:
+            db.session.add(WorkoutEntry(
+                session_id=session.id,
+                type="strength",
+                exercise="squats",
+                sets=4,
+                reps=12
+            ))
+        if "pullups" in raw_text:
+            db.session.add(WorkoutEntry(
+                session_id=session.id,
+                type="strength",
+                exercise="pullups",
+                sets=3,
+                reps=8
+            ))
+        if "deadlifts" in raw_text:
+            db.session.add(WorkoutEntry(
+                session_id=session.id,
+                type="strength",
+                exercise="deadlifts",
+                sets=5,
+                reps=5
+            ))
+
+    db.session.commit()
+
+
 with app.app_context():
     db.create_all()
+    if ENV == "testing":
+        seed_test_data()
 
 # Function to call OpenAI and structure the workout
 # noinspection PyTypeChecker
@@ -104,6 +196,28 @@ def index():
 
     sessions = WorkoutSession.query.order_by(WorkoutSession.id.desc()).all()
     return render_template("index.html", sessions=sessions)
+
+@app.route("/api/progress/cardio")
+def cardio_progress():
+    results = db.session.execute(text("""
+        SELECT ws.date,
+               SUM(we.distance) AS total_distance,
+               SUM(we.duration) AS total_duration
+        FROM workout_entry we
+        JOIN workout_session ws ON ws.id = we.session_id
+        WHERE we.type = 'cardio'
+        GROUP BY ws.date
+        ORDER BY ws.date
+    """)).fetchall()
+
+    return jsonify([
+        {
+            "date": row[0],
+            "distance": round(row[1], 2) if row[1] is not None else None,
+            "duration": round(row[2], 2) if row[2] is not None else None
+        } for row in results
+    ])
+
 
 if __name__ == "__main__":
     app.run(debug=True)
