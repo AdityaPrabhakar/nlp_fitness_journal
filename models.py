@@ -1,7 +1,6 @@
 # models.py
 from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
+from init import db
 
 class WorkoutSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
