@@ -10,27 +10,23 @@
         <button type="submit">Log Workout</button>
     </form>
 
-    <h2>📅 Logged Workouts</h2>
+    <h2>📅 Logged Sessions</h2>
     <ul>
-        {% for entry in entries %}
+        {% for session in sessions %}
             <li>
-                <strong>{{ entry.date }}</strong>: {{ entry.description }}
-                {% if entry.parsed_data.entries %}
-                    <ul>
-                        {% for item in entry.parsed_data.entries %}
-                            <li>
-                                {{ item.exercise }} —
-                                {% if item.type == 'strength' %}
-                                    {{ item.sets }} sets of {{ item.reps }} reps
-                                {% elif item.type == 'cardio' %}
-                                    {{ item.distance_miles }} miles
-                                {% endif %}
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% elif entry.parsed_data.error %}
-                    <em>Error: {{ entry.parsed_data.error }}</em>
-                {% endif %}
+                <strong>{{ session.date }}</strong>: {{ session.raw_text }}
+                <ul>
+                    {% for entry in session.entries %}
+                        <li>
+                            {{ entry.exercise }} —
+                            {% if entry.type == 'strength' %}
+                                {{ entry.sets }} sets x {{ entry.reps }} reps
+                            {% elif entry.type == 'cardio' %}
+                                {{ entry.duration }} minutes
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
             </li>
         {% endfor %}
     </ul>

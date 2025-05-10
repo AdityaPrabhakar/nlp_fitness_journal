@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect
-from models import db, WorkoutEntry
+from models import db, WorkoutSession, WorkoutEntry
 from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -69,31 +69,37 @@ def parse_workout(text):
 def index():
     if request.method == "POST":
         raw_text = request.form["entry"]
+        now = datetime.now().strftime("%Y-%m-%d")
 
         try:
             structured_response = parse_workout(raw_text)
+            parsed = json.loads(structured_response)
         except Exception as e:
-            structured_response = json.dumps({"error": str(e)})
+            print("Error parsing:", e)
+            parsed = {"entries": []}
 
-        entry = WorkoutEntry(
-            date=datetime.now().strftime("%Y-%m-%d"),
-            description=raw_text,
-            structured_data=structured_response
-        )
-        db.session.add(entry)
+        # Save session
+        session = WorkoutSession(date=now, raw_text=raw_text)
+        db.session.add(session)
+        db.session.commit()
+
+        # Save entries
+        for item in parsed.get("entries", []):
+            entry = WorkoutEntry(
+                session_id=session.id,
+                type=item.get("type"),
+                exercise=item.get("exercise"),
+                duration=item.get("duration"),
+                sets=item.get("sets"),
+                reps=item.get("reps")
+            )
+            db.session.add(entry)
+
         db.session.commit()
         return redirect("/")
 
-    entries = WorkoutEntry.query.order_by(WorkoutEntry.id.desc()).all()
-
-    # Parse JSON for template use
-    for entry in entries:
-        try:
-            entry.parsed_data = json.loads(entry.structured_data)
-        except:
-            entry.parsed_data = {"error": "Invalid JSON"}
-
-    return render_template("index.html", entries=entries)
+    sessions = WorkoutSession.query.order_by(WorkoutSession.id.desc()).all()
+    return render_template("index.html", sessions=sessions)
 
 if __name__ == "__main__":
     app.run(debug=True)
