@@ -1,0 +1,16 @@
+<h2 class="text-2xl font-semibold mt-8">💪 View Strength Progress by Exercise</h2>
+<select id="strengthSelect" class="border p-2 rounded mt-4">
+    <option disabled selected>Select strength exercise</option>
+    {% for exercise in strength_exercises %}
+        <option value="{{ exercise }}">{{ exercise }}</option>
+    {% endfor %}
+</select>
+<canvas id="strengthExerciseChart" height="100"></canvas>
+
+<div id="strengthLogsContainer">
+    <h3 class="text-xl font-semibold mt-4">📄 Strength Log Entries</h3>
+    <table id="strengthLogTable">
+        <thead><tr><th>Date</th><th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th></tr></thead>
+        <tbody></tbody>
+    </table>
+</div>

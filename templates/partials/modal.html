@@ -1,0 +1,22 @@
+<div id="modal-{{ session.id }}" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+    <div class="bg-white p-6 rounded shadow-lg w-3/4">
+        <h3 class="text-xl font-semibold">Journal Entry for {{ session.date }}</h3>
+        <p>{{ session.raw_text }}</p>
+        <ul class="mt-4">
+            {% for entry in session.entries %}
+                <li class="mt-2">
+                    <strong>{{ entry.exercise }}</strong> —
+                    {% if entry.type == 'strength' %}
+                        {{ entry.sets }}×{{ entry.reps }} reps{% if entry.weight %} @ {{ entry.weight }} lbs{% endif %}
+                    {% elif entry.type == 'cardio' %}
+                        {% if entry.distance %}{{ entry.distance }} mi{% endif %}{% if entry.duration %} ({{ entry.duration }} min){% endif %}
+                    {% endif %}
+                    {% if entry.notes %}
+                        <br><em>📝 {{ entry.notes }}</em>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+        <button class="text-red-500 mt-4" onclick="closeModal('modal-{{ session.id }}')">Close</button>
+    </div>
+</div>
