@@ -155,3 +155,89 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+    const calendar = document.getElementById('calendar');
+    const modal = document.getElementById('session-modal');
+    const sessionDetails = document.getElementById('session-details');
+
+    if (!calendar) return; // only run on pages that have a calendar
+
+    const sessionsByDate = {};
+
+    function formatDateKey(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+    }
+
+    window.closeModal = closeModal; // Make it available to the inline button
+
+    function openModal(content) {
+        sessionDetails.innerHTML = content;
+        modal.classList.remove('hidden');
+    }
+
+    function renderCalendar() {
+        const today = new Date();
+        const start = new Date(today.getFullYear(), today.getMonth(), 1);
+        const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+        calendar.innerHTML = '';
+
+        for (let i = 1; i <= end.getDate(); i++) {
+            const date = new Date(today.getFullYear(), today.getMonth(), i);
+            const dateKey = formatDateKey(date);
+
+            const hasSession = sessionsByDate[dateKey];
+            const cell = document.createElement('div');
+            cell.className = `p-3 border rounded text-center cursor-pointer ${hasSession ? 'bg-blue-100 hover:bg-blue-200' : 'bg-gray-50'}`;
+            cell.innerText = i;
+
+            if (hasSession) {
+                cell.onclick = () => {
+                    const session = sessionsByDate[dateKey];
+                    fetch(`/api/session/${session.id}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            const entriesHtml = data.entries.map(entry => `
+                                <div class="mb-2 p-2 border rounded">
+                                    <p><strong>Exercise:</strong> ${entry.exercise}</p>
+                                    <p><strong>Type:</strong> ${entry.type}</p>
+                                    <p><strong>Sets:</strong> ${entry.sets}</p>
+                                    <p><strong>Reps:</strong> ${entry.reps}</p>
+                                    <p><strong>Weight:</strong> ${entry.weight}</p>
+                                    <p><strong>Duration:</strong> ${entry.duration}</p>
+                                    <p><strong>Distance:</strong> ${entry.distance}</p>
+                                    <p><strong>Notes:</strong> ${entry.notes || 'None'}</p>
+                                </div>
+                            `).join('');
+
+                            openModal(`
+                                <p><strong>Date:</strong> ${data.date}</p>
+                                <p><strong>Session Notes:</strong> ${data.notes || 'None'}</p>
+                                <p><strong>Raw Text:</strong> ${data.raw_text || 'None'}</p>
+                                <hr class="my-2">
+                                <h4 class="font-semibold mb-1">Entries</h4>
+                                ${entriesHtml || '<p>No entries found.</p>'}
+                            `);
+                        });
+                };
+            }
+
+            calendar.appendChild(cell);
+        }
+    }
+
+    fetch('/api/sessions')
+        .then(res => res.json())
+        .then(data => {
+            for (const session of data) {
+                sessionsByDate[session.date] = session;
+            }
+            renderCalendar();
+        });
+});
+
