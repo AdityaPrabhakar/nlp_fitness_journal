@@ -105,3 +105,34 @@ def get_cardio_logs(exercise):
             "notes": log.notes
         } for log in logs
     ])
+
+@log_entry_bp.route("/api/logs/by-date")
+def get_logs_by_date():
+    sessions = (
+        db.session.query(WorkoutSession)
+        .order_by(WorkoutSession.date.desc())
+        .all()
+    )
+
+    data = []
+    for session in sessions:
+        entries = WorkoutEntry.query.filter_by(session_id=session.id).all()
+        entry_data = [
+            {
+                "exercise": e.exercise,
+                "type": e.type,
+                "sets": e.sets,
+                "reps": e.reps,
+                "weight": e.weight,
+                "duration": e.duration,
+                "distance": e.distance,
+                "notes": e.notes,
+            }
+            for e in entries
+        ]
+        data.append({
+            "date": session.date,
+            "entries": entry_data
+        })
+
+    return jsonify(data)
