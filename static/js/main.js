@@ -158,12 +158,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 document.addEventListener('DOMContentLoaded', () => {
     const calendar = document.getElementById('calendar');
+    const monthYearLabel = document.getElementById('monthYear');
     const modal = document.getElementById('session-modal');
     const sessionDetails = document.getElementById('session-details');
-
-    if (!calendar) return; // only run on pages that have a calendar
-
     const sessionsByDate = {};
+
+    let currentDate = new Date();
 
     function formatDateKey(date) {
         return date.toISOString().split('T')[0];
@@ -172,48 +172,60 @@ document.addEventListener('DOMContentLoaded', () => {
     function closeModal() {
         modal.classList.add('hidden');
     }
-
-    window.closeModal = closeModal; // Make it available to the inline button
+    window.closeModal = closeModal;
 
     function openModal(content) {
         sessionDetails.innerHTML = content;
         modal.classList.remove('hidden');
     }
 
-    function renderCalendar() {
-        const today = new Date();
-        const start = new Date(today.getFullYear(), today.getMonth(), 1);
-        const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    function renderCalendar(date) {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startDay = firstDay.getDay();
+
+        monthYearLabel.textContent = date.toLocaleDateString(undefined, {
+            month: 'long',
+            year: 'numeric'
+        });
 
         calendar.innerHTML = '';
 
-        for (let i = 1; i <= end.getDate(); i++) {
-            const date = new Date(today.getFullYear(), today.getMonth(), i);
-            const dateKey = formatDateKey(date);
+        // Empty cells before first day
+        for (let i = 0; i < startDay; i++) {
+            calendar.appendChild(document.createElement('div'));
+        }
 
-            const hasSession = sessionsByDate[dateKey];
+        for (let i = 1; i <= lastDay.getDate(); i++) {
+            const cellDate = new Date(year, month, i);
+            const dateKey = formatDateKey(cellDate);
+            const session = sessionsByDate[dateKey];
+
             const cell = document.createElement('div');
-            cell.className = `p-3 border rounded text-center cursor-pointer ${hasSession ? 'bg-blue-100 hover:bg-blue-200' : 'bg-gray-50'}`;
+            cell.className = `p-3 border rounded text-center cursor-pointer transition-all duration-150 ${
+                session ? 'bg-blue-100 hover:bg-blue-200' : 'bg-gray-50'
+            }`;
             cell.innerText = i;
 
-            if (hasSession) {
+            if (session) {
                 cell.onclick = () => {
-                    const session = sessionsByDate[dateKey];
                     fetch(`/api/session/${session.id}`)
                         .then(res => res.json())
                         .then(data => {
-                            const entriesHtml = data.entries.map(entry => `
-                                <div class="mb-2 p-2 border rounded">
-                                    <p><strong>Exercise:</strong> ${entry.exercise}</p>
-                                    <p><strong>Type:</strong> ${entry.type}</p>
-                                    <p><strong>Sets:</strong> ${entry.sets}</p>
-                                    <p><strong>Reps:</strong> ${entry.reps}</p>
-                                    <p><strong>Weight:</strong> ${entry.weight}</p>
-                                    <p><strong>Duration:</strong> ${entry.duration}</p>
-                                    <p><strong>Distance:</strong> ${entry.distance}</p>
-                                    <p><strong>Notes:</strong> ${entry.notes || 'None'}</p>
-                                </div>
-                            `).join('');
+                            const entriesHtml = data.entries.map(entry => {
+                                const entryLines = [];
+                                if (entry.exercise) entryLines.push(`<p><strong>Exercise:</strong> ${entry.exercise}</p>`);
+                                if (entry.type) entryLines.push(`<p><strong>Type:</strong> ${entry.type}</p>`);
+                                if (entry.sets) entryLines.push(`<p><strong>Sets:</strong> ${entry.sets}</p>`);
+                                if (entry.reps) entryLines.push(`<p><strong>Reps:</strong> ${entry.reps}</p>`);
+                                if (entry.weight) entryLines.push(`<p><strong>Weight:</strong> ${entry.weight}</p>`);
+                                if (entry.duration) entryLines.push(`<p><strong>Duration:</strong> ${entry.duration}</p>`);
+                                if (entry.distance) entryLines.push(`<p><strong>Distance:</strong> ${entry.distance}</p>`);
+                                if (entry.notes) entryLines.push(`<p><strong>Notes:</strong> ${entry.notes}</p>`);
+                                return `<div class="mb-2 p-2 border rounded">${entryLines.join('')}</div>`;
+                            }).join('');
 
                             openModal(`
                                 <p><strong>Date:</strong> ${data.date}</p>
@@ -237,7 +249,16 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const session of data) {
                 sessionsByDate[session.date] = session;
             }
-            renderCalendar();
+            renderCalendar(currentDate);
         });
-});
 
+    document.getElementById('prevMonth')?.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar(currentDate);
+    });
+
+    document.getElementById('nextMonth')?.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar(currentDate);
+    });
+});
