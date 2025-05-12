@@ -60,3 +60,19 @@ NEVER return just a list. NEVER omit the top-level "entries" and "notes" keys.
 
     content = response.choices[0].message.content
     return json.loads(content)
+
+def clean_entry(entry):
+    """Fixes and enriches a single workout entry."""
+    if 'reps' in entry and ('sets' not in entry or not entry['sets']):
+        entry['sets'] = 1
+
+    # Calculate volume if applicable
+    if 'reps' in entry and 'sets' in entry:
+        entry['volume'] = entry['reps'] * entry['sets']
+
+    return entry
+
+
+def clean_entries(entries):
+    """Cleans and normalizes a list of entries."""
+    return [clean_entry(entry) for entry in entries]

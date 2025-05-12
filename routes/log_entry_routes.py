@@ -2,7 +2,7 @@ from flask import Blueprint, request, render_template, redirect, jsonify
 from datetime import datetime
 from models import WorkoutSession
 from models import WorkoutEntry
-from utils.openai_utils import parse_workout
+from utils.openai_utils import parse_workout, clean_entries
 from init import db
 
 log_entry_bp = Blueprint("log_entry", __name__)
@@ -11,30 +11,31 @@ log_entry_bp = Blueprint("log_entry", __name__)
 def index():
     if request.method == "POST":
         raw_text = request.form["entry"]
-        now = datetime.now().strftime("%Y-%m-%d")
+        now_date = datetime.now().strftime("%Y-%m-%d")
 
         try:
             structured_response = parse_workout(raw_text)
 
             entries = structured_response.get("entries", [])
             notes = structured_response.get("notes", "")
-            print("Entries:", entries)
-            print("General Notes:", notes)
+
+            cleaned_entries = clean_entries(entries)
 
         except Exception as e:
             print("Error parsing:", e)
-            entries = []
+            cleaned_entries = []
             notes = ""
 
+        # Always create a new WorkoutSession even if one exists on the same date
         session = WorkoutSession(
-            date=now,
+            date=now_date,
             raw_text=raw_text,
             notes=notes
         )
         db.session.add(session)
-        db.session.commit()
+        db.session.commit()  # Get session.id
 
-        for item in entries:
+        for item in cleaned_entries:
             entry = WorkoutEntry.from_dict(item, session.id)
             db.session.add(entry)
 
@@ -50,6 +51,7 @@ def index():
         cardio_exercises=[e[0] for e in cardio_exercises],
         strength_exercises=[e[0] for e in strength_exercises]
     )
+
 
 
 @log_entry_bp.route("/api/logs/strength/<exercise>")

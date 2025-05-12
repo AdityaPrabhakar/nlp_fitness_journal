@@ -41,16 +41,18 @@ def cardio_progress_by_exercise(exercise):
 @progress_bp.route("/api/progress/strength/<exercise>")
 def strength_progress(exercise):
     results = db.session.execute(text("""
-        SELECT ws.date,
-               we.sets * we.reps AS volume,
-               we.weight AS max_weight
+        SELECT
+            ws.date,
+            SUM(COALESCE(we.sets, 0) * COALESCE(we.reps, 0)) AS volume,
+            MAX(we.weight) AS max_weight
         FROM workout_entry we
         JOIN workout_session ws ON ws.id = we.session_id
         WHERE we.type = 'strength' AND LOWER(we.exercise) = :exercise
-        GROUP BY ws.date, we.weight
+        GROUP BY ws.date
         ORDER BY ws.date
     """), {"exercise": exercise.lower()}).fetchall()
 
     return jsonify([
         {"date": r[0], "volume": r[1], "max_weight": r[2]} for r in results
     ])
+
