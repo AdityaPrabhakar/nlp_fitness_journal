@@ -8,11 +8,11 @@ progress_bp = Blueprint("progress", __name__)
 def cardio_progress():
     results = db.session.execute(text("""
         SELECT ws.date,
-               SUM(we.distance) AS distance,
-               SUM(we.duration) AS duration
-        FROM workout_entry we
+               SUM(ce.distance) AS distance,
+               SUM(ce.duration) AS duration
+        FROM cardio_entry ce
+        JOIN workout_entry we ON we.id = ce.entry_id
         JOIN workout_session ws ON ws.id = we.session_id
-        WHERE we.type = 'cardio'
         GROUP BY ws.date
         ORDER BY ws.date
     """)).fetchall()
@@ -25,14 +25,15 @@ def cardio_progress():
 def cardio_progress_by_exercise(exercise):
     results = db.session.execute(text("""
         SELECT ws.date,
-               SUM(we.distance) AS distance,
-               SUM(we.duration) AS duration
-        FROM workout_entry we
+               SUM(ce.distance) AS distance,
+               SUM(ce.duration) AS duration
+        FROM cardio_entry ce
+        JOIN workout_entry we ON we.id = ce.entry_id
         JOIN workout_session ws ON ws.id = we.session_id
-        WHERE we.type = 'cardio' AND we.exercise = :exercise
+        WHERE LOWER(we.exercise) = :exercise
         GROUP BY ws.date
         ORDER BY ws.date
-    """), {"exercise": exercise}).fetchall()
+    """), {"exercise": exercise.lower()}).fetchall()
 
     return jsonify([
         {"date": r[0], "distance": r[1], "duration": r[2]} for r in results
@@ -43,11 +44,12 @@ def strength_progress(exercise):
     results = db.session.execute(text("""
         SELECT
             ws.date,
-            SUM(COALESCE(we.sets, 0) * COALESCE(we.reps, 0)) AS volume,
-            MAX(we.weight) AS max_weight
-        FROM workout_entry we
+            SUM(se.reps * COALESCE(se.weight, 0)) AS volume,
+            MAX(se.weight) AS max_weight
+        FROM strength_entry se
+        JOIN workout_entry we ON we.id = se.entry_id
         JOIN workout_session ws ON ws.id = we.session_id
-        WHERE we.type = 'strength' AND LOWER(we.exercise) = :exercise
+        WHERE LOWER(we.exercise) = :exercise
         GROUP BY ws.date
         ORDER BY ws.date
     """), {"exercise": exercise.lower()}).fetchall()
@@ -55,4 +57,3 @@ def strength_progress(exercise):
     return jsonify([
         {"date": r[0], "volume": r[1], "max_weight": r[2]} for r in results
     ])
-

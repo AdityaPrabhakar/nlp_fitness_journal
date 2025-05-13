@@ -48,14 +48,25 @@ export function initCalendar(calendarEl, monthYearLabelEl, sessionModalEl, sessi
                                 const lines = [];
                                 if (entry.exercise) lines.push(`<p><strong>Exercise:</strong> ${entry.exercise}</p>`);
                                 if (entry.type) lines.push(`<p><strong>Type:</strong> ${entry.type}</p>`);
-                                if (entry.sets) lines.push(`<p><strong>Sets:</strong> ${entry.sets}</p>`);
-                                if (entry.reps) lines.push(`<p><strong>Reps:</strong> ${entry.reps}</p>`);
-                                if (entry.weight) lines.push(`<p><strong>Weight:</strong> ${entry.weight}</p>`);
-                                if (entry.duration) lines.push(`<p><strong>Duration:</strong> ${entry.duration}</p>`);
-                                if (entry.distance) lines.push(`<p><strong>Distance:</strong> ${entry.distance}</p>`);
+
+                                if (entry.type === "strength" && entry.sets_details?.length) {
+                                    const sets = entry.sets_details.map(set =>
+                                        `<li>Set ${set.set_number}: ${set.reps} reps @ ${set.weight ?? "bodyweight"} lbs</li>`
+                                    ).join('');
+                                    lines.push(`<p><strong>Sets:</strong></p><ul class="list-disc list-inside">${sets}</ul>`);
+                                }
+
+                                if (entry.type === "cardio") {
+                                    if (entry.duration) lines.push(`<p><strong>Duration:</strong> ${entry.duration} min</p>`);
+                                    if (entry.distance) lines.push(`<p><strong>Distance:</strong> ${entry.distance} miles</p>`);
+                                    if (entry.cardio_notes) lines.push(`<p><strong>Cardio Notes:</strong> ${entry.cardio_notes}</p>`);
+                                }
+
                                 if (entry.notes) lines.push(`<p><strong>Notes:</strong> ${entry.notes}</p>`);
+
                                 return `<div class="mb-2 p-2 border rounded">${lines.join('')}</div>`;
                             }).join('');
+
 
                             return `
                                 <div class="mb-4">

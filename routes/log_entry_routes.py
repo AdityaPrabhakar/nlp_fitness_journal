@@ -1,7 +1,6 @@
 from flask import Blueprint, request, render_template, redirect, jsonify
 from datetime import datetime, date
-from models import WorkoutSession
-from models import WorkoutEntry
+from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
 from models.goal import Goal, GoalTarget
 from utils.openai_utils import parse_workout, clean_entries, parse_goals
 from init import db
@@ -92,19 +91,22 @@ def index():
 
 
 
-
 @log_entry_bp.route("/api/logs/strength/<exercise>")
 def get_strength_logs(exercise):
     logs = (
         db.session.query(
-            WorkoutEntry.sets,
-            WorkoutEntry.reps,
-            WorkoutEntry.weight,
+            StrengthEntry.set_number,
+            StrengthEntry.reps,
+            StrengthEntry.weight,
             WorkoutSession.date,
             WorkoutEntry.notes
         )
         .join(WorkoutSession)
-        .filter(WorkoutEntry.exercise == exercise)
+        .join(StrengthEntry)  # Join StrengthEntry to access strength details
+        .filter(
+            WorkoutEntry.exercise == exercise,  # Filter by the exercise field in WorkoutEntry
+            WorkoutEntry.type == 'strength'  # Make sure we're querying for strength entries
+        )
         .order_by(WorkoutSession.date.desc())
         .all()
     )
@@ -112,27 +114,28 @@ def get_strength_logs(exercise):
     return jsonify([
         {
             "date": log.date,
-            "sets": log.sets,
+            "sets": log.set_number,
             "reps": log.reps,
             "weight": log.weight,
             "notes": log.notes
-        }
-        for log in logs
+        } for log in logs
     ])
+
 
 @log_entry_bp.route("/api/logs/cardio/<exercise>")
 def get_cardio_logs(exercise):
     logs = (
         db.session.query(
+            CardioEntry.duration,
+            CardioEntry.distance,
             WorkoutSession.date,
-            WorkoutEntry.duration,
-            WorkoutEntry.distance,
             WorkoutEntry.notes
         )
         .join(WorkoutSession)
+        .join(CardioEntry)  # Join CardioEntry to access cardio details
         .filter(
-            WorkoutEntry.type == 'cardio',
-            WorkoutEntry.exercise == exercise
+            WorkoutEntry.exercise == exercise,  # Filter by the exercise field in WorkoutEntry
+            WorkoutEntry.type == 'cardio'  # Make sure we're querying for cardio entries
         )
         .order_by(WorkoutSession.date.desc())
         .all()
@@ -147,8 +150,10 @@ def get_cardio_logs(exercise):
         } for log in logs
     ])
 
+
 @log_entry_bp.route("/api/logs/by-date")
 def get_logs_by_date():
+    # Query for all workout sessions
     sessions = (
         db.session.query(WorkoutSession)
         .order_by(WorkoutSession.date.desc())
@@ -157,23 +162,54 @@ def get_logs_by_date():
 
     data = []
     for session in sessions:
+        # Get all workout entries for the session
         entries = WorkoutEntry.query.filter_by(session_id=session.id).all()
-        entry_data = [
-            {
-                "exercise": e.exercise,
-                "type": e.type,
-                "sets": e.sets,
-                "reps": e.reps,
-                "weight": e.weight,
-                "duration": e.duration,
-                "distance": e.distance,
-                "notes": e.notes,
-            }
-            for e in entries
-        ]
+        entry_data = []
+
+        for e in entries:
+            if e.type == 'cardio':
+                # For cardio, fetch data from CardioEntry
+                cardio_data = (
+                    db.session.query(CardioEntry)
+                    .filter(CardioEntry.session_id == session.id)
+                    .filter(CardioEntry.exercise == e.exercise)
+                    .first()
+                )
+                entry_data.append({
+                    "exercise": cardio_data.exercise,
+                    "type": e.type,
+                    "duration": cardio_data.duration,
+                    "distance": cardio_data.distance,
+                    "notes": cardio_data.notes,
+                })
+            else:
+                # For strength, fetch data from StrengthEntry
+                strength_data = (
+                    db.session.query(StrengthEntry)
+                    .filter(StrengthEntry.session_id == session.id)
+                    .filter(StrengthEntry.exercise == e.exercise)
+                    .all()
+                )
+                strength_entries = [
+                    {
+                        "set_number": entry.set_number,
+                        "reps": entry.reps,
+                        "weight": entry.weight,
+                        "notes": entry.notes
+                    } for entry in strength_data
+                ]
+                entry_data.append({
+                    "exercise": e.exercise,
+                    "type": e.type,
+                    "sets": strength_entries
+                })
+
+        # Add entry data to session data
         data.append({
             "date": session.date,
             "entries": entry_data
         })
 
     return jsonify(data)
+
+

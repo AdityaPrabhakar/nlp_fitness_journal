@@ -7,49 +7,64 @@ client = OpenAI()
 # noinspection PyTypeChecker
 def parse_workout(text):
     prompt = f"""
-You are a fitness assistant. A user will describe their workout in natural language.
-Convert it into a strict JSON object with only the fields needed.
+    You are a fitness assistant. A user will describe their workout in natural language.
+    Convert it into a strict JSON object with only the fields needed.
 
-### Required JSON structure:
-Always return a dictionary with exactly two keys:
-- "entries": a list of workout items
-- "notes": a general string (can be empty if nothing general to say)
+    ### Required JSON structure:
+    Always return a dictionary with exactly two keys:
+    - "entries": a list of workout items
+    - "notes": a general string (can be empty if nothing general to say)
 
-NEVER return just a list. NEVER omit the top-level "entries" and "notes" keys.
+    ### Entry format:
+    Each workout entry must have:
+    - "type": either "strength", "cardio", or another clearly inferred category
+    - "exercise": name of the exercise (e.g. "bench press")
+    - "notes": per-exercise notes if provided (optional)
 
-### Example output:
+    For strength training, include:
+    - "sets_details": a list of sets, each with:
+        - "set_number": the set index (1-based)
+        - "reps": number of reps
+        - "weight": weight used (if mentioned; otherwise omit)
 
-{{
-  "entries": [
+    For cardio, include:
+    - "duration": in minutes (if provided)
+    - "distance": in miles or km (if provided)
+
+    ### Example output:
+
     {{
-      "type": "strength",
-      "exercise": "squats",
-      "sets": 3,
-      "reps": 10,
-      "notes": "Focused on depth and form"
-    }},
-    {{
-      "type": "cardio",
-      "exercise": "running",
-      "duration": 30,
-      "distance": 3.0,
-      "notes": "Felt good, ran outside"
+      "entries": [
+        {{
+          "type": "strength",
+          "exercise": "bench press",
+          "sets_details": [
+            {{ "set_number": 1, "reps": 8, "weight": 135 }},
+            {{ "set_number": 2, "reps": 6, "weight": 155 }},
+            {{ "set_number": 3, "reps": 6, "weight": 155 }}
+          ],
+          "notes": "Felt strong today"
+        }},
+        {{
+          "type": "cardio",
+          "exercise": "running",
+          "duration": 30,
+          "distance": 3.0,
+          "notes": "Jogged in the park"
+        }}
+      ],
+      "notes": "Solid session overall."
     }}
-  ],
-  "notes": "Overall felt tired due to poor sleep."
-}}
 
-### Rules:
-- Only include relevant keys. Do not include null, empty strings, or empty arrays.
-- Entry-level `notes` are for per-exercise comments.
-- Top-level `notes` are general reflections about the workout overall.
-- Do NOT return explanations. Only return valid, parsable JSON.
-- Only include actual workouts — completed activities, not goals or future intentions.
-- Ignore text like "I want to run 50 miles this month" or "I'm planning to improve my deadlift" — these are goals, not workouts.
+    ### Rules:
+    - Only include relevant keys. Do not include null, empty strings, or empty arrays.
+    - Only include actual workouts — completed activities, not future intentions.
+    - Top-level "notes" should summarize the entire workout.
+    - Do NOT return explanations. Only return valid, parsable JSON.
 
-### Input:
-{text}
-"""
+    ### Input:
+    {text}
+    """
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",

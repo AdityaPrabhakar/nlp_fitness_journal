@@ -1,8 +1,7 @@
 import json
-import os
 from config import TestingConfig
 from init import create_app, db
-from models import WorkoutSession, WorkoutEntry
+from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
 from dotenv import load_dotenv
 from flask import current_app
 
@@ -10,40 +9,64 @@ from flask import current_app
 load_dotenv()
 
 def seed_test_data():
-    # Get the path of the data file from the environment variable, with a fallback
-    data_file_path = current_app.config.get("SEED_DATA_FILE_PATH")
-
-    try:
-        # Read data from the JSON file
-        with open(data_file_path, 'r') as f:
-            sample_sessions = json.load(f)
-    except FileNotFoundError:
-        print(f"Error: The data file '{data_file_path}' was not found.")
-        return
-    except json.JSONDecodeError:
-        print(f"Error: The data file '{data_file_path}' is not a valid JSON file.")
-        return
-
-    # Create Flask app context for this seeding operation
     app = create_app(TestingConfig)
 
     with app.app_context():
+        # Get the path of the data file from the environment variable
+        data_file_path = current_app.config.get("SEED_DATA_FILE_PATH")
+
+        try:
+            with open(data_file_path, 'r') as f:
+                sample_sessions = json.load(f)
+        except FileNotFoundError:
+            print(f"Error: The data file '{data_file_path}' was not found.")
+            return
+        except json.JSONDecodeError:
+            print(f"Error: The data file '{data_file_path}' is not a valid JSON file.")
+            return
+
         print("Dropping and creating the schema...")
-        db.drop_all()  # Drop all tables (to avoid duplicates)
-        db.create_all()  # Recreate schema
+        db.drop_all()
+        db.create_all()
 
         print("Seeding test data...")
 
-        # Iterate through sample_sessions and add them to the DB
         for session_data in sample_sessions:
-            session = WorkoutSession(date=session_data["date"], raw_text=session_data["raw_text"])
+            session = WorkoutSession(
+                date=session_data["date"],
+                raw_text=session_data["raw_text"],
+                notes=session_data.get("notes")
+            )
             db.session.add(session)
-            db.session.commit()  # Commit to get session ID
+            db.session.commit()  # Save to generate session.id
 
-            # Add entries to the session
             for entry_data in session_data["entries"]:
-                entry = WorkoutEntry.from_dict(entry_data, session.id)
+                entry = WorkoutEntry(
+                    session_id=session.id,
+                    type=entry_data["type"],
+                    exercise=entry_data["exercise"],
+                    notes=entry_data.get("notes")
+                )
                 db.session.add(entry)
+                db.session.commit()  # Save to generate entry.id
 
-        db.session.commit()  # Commit all entries
+                if entry.type == "strength":
+                    for set_data in entry_data.get("strength_entries", []):
+                        strength_set = StrengthEntry(
+                            entry_id=entry.id,
+                            set_number=set_data["set_number"],
+                            reps=set_data["reps"],
+                            weight=set_data.get("weight")
+                        )
+                        db.session.add(strength_set)
+
+                elif entry.type == "cardio":
+                    cardio = CardioEntry(
+                        entry_id=entry.id,
+                        duration=entry_data.get("cardio_detail", {}).get("duration"),
+                        distance=entry_data.get("cardio_detail", {}).get("distance")
+                    )
+                    db.session.add(cardio)
+
+        db.session.commit()
         print("Test data seeded successfully.")

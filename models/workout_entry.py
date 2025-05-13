@@ -7,24 +7,41 @@ class WorkoutEntry(db.Model):
     session_id = db.Column(db.Integer, db.ForeignKey('workout_session.id'), nullable=False)
     type = db.Column(db.String, nullable=False)
     exercise = db.Column(db.String, nullable=False)
-    duration = db.Column(db.Float, nullable=True)
-    distance = db.Column(db.Float, nullable=True)
-    sets = db.Column(db.Integer, nullable=True)
-    reps = db.Column(db.Integer, nullable=True)
-    weight = db.Column(db.Float, nullable=True)
     notes = db.Column(db.Text, nullable=True)
+
+    strength_entries = db.relationship('StrengthEntry', backref='entry', lazy=True)
+    cardio_detail = db.relationship('CardioEntry', backref='entry', uselist=False)
 
     @staticmethod
     def from_dict(data, session_id):
-        return WorkoutEntry(
+        from models import StrengthEntry, CardioEntry
+        entry = WorkoutEntry(
             session_id=session_id,
             type=data["type"],
             exercise=data["exercise"],
-            duration=data.get("duration"),
-            distance=data.get("distance"),
-            sets=data.get("sets"),
-            reps=data.get("reps"),
-            weight=data.get("weight"),
             notes=data.get("notes")
         )
+        db.session.add(entry)
+        db.session.flush()  # to get entry.id
+
+        if data["type"] == "strength":
+            for i, s in enumerate(data.get("sets_details", []), start=1):
+                strength_set = StrengthEntry(
+                    entry_id=entry.id,
+                    set_number=s.get("set_number", i),
+                    reps=s["reps"],
+                    weight=s.get("weight")
+                )
+                db.session.add(strength_set)
+
+        elif data["type"] == "cardio":
+            cardio = CardioEntry(
+                entry_id=entry.id,
+                duration=data.get("duration"),
+                distance=data.get("distance")
+            )
+            db.session.add(cardio)
+
+        return entry
+
 

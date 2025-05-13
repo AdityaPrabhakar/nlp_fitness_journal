@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify
 from models import WorkoutSession, WorkoutEntry
+from models import StrengthEntry, CardioEntry  # Assuming this won't cause circular import
 
 session_bp = Blueprint('session', __name__)
 
@@ -25,17 +26,30 @@ def get_session_details(session_id):
 
     entries = WorkoutEntry.query.filter_by(session_id=session.id).all()
     entry_list = []
+
     for entry in entries:
-        entry_list.append({
+        entry_data = {
             'exercise': entry.exercise,
             'type': entry.type,
-            'sets': entry.sets,
-            'reps': entry.reps,
-            'weight': entry.weight,
-            'duration': entry.duration,
-            'distance': entry.distance,
             'notes': entry.notes
-        })
+        }
+
+        if entry.type == "strength":
+            sets = StrengthEntry.query.filter_by(entry_id=entry.id).order_by(StrengthEntry.set_number).all()
+            entry_data["sets_details"] = [
+                {
+                    "set_number": s.set_number,
+                    "reps": s.reps,
+                    "weight": s.weight
+                } for s in sets
+            ]
+        elif entry.type == "cardio":
+            cardio = CardioEntry.query.filter_by(entry_id=entry.id).first()
+            if cardio:
+                entry_data["duration"] = cardio.duration
+                entry_data["distance"] = cardio.distance
+
+        entry_list.append(entry_data)
 
     return jsonify({
         'date': session.date,
