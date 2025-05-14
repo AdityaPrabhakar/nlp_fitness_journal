@@ -22,14 +22,14 @@ class WorkoutEntry(db.Model):
             notes=data.get("notes")
         )
         db.session.add(entry)
-        db.session.flush()  # to get entry.id
+        db.session.flush()  # get entry.id
 
         if data["type"] == "strength":
             for i, s in enumerate(data.get("sets_details", []), start=1):
                 strength_set = StrengthEntry(
                     entry_id=entry.id,
                     set_number=s.get("set_number", i),
-                    reps=s["reps"],
+                    reps=s.get("reps"),  # ← allow None
                     weight=s.get("weight")
                 )
                 db.session.add(strength_set)
@@ -43,5 +43,7 @@ class WorkoutEntry(db.Model):
             db.session.add(cardio)
 
         return entry
+
+
 
 
