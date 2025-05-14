@@ -93,21 +93,29 @@ export function initCalendar(calendarEl, monthYearLabelEl, sessionModalEl, sessi
         renderCalendar(currentDate);
     }
 
-    fetch('/api/sessions')
-        .then(res => res.json())
-        .then(data => {
-            for (const session of data) {
-                const dateKey = session.date;
-                if (!sessionsByDate[dateKey]) {
-                    sessionsByDate[dateKey] = [];
+    function refreshCalendar() {
+        fetch('/api/sessions')
+            .then(res => res.json())
+            .then(data => {
+                // Clear and reload the sessions
+                Object.keys(sessionsByDate).forEach(key => delete sessionsByDate[key]);
+                for (const session of data) {
+                    const dateKey = session.date;
+                    if (!sessionsByDate[dateKey]) {
+                        sessionsByDate[dateKey] = [];
+                    }
+                    sessionsByDate[dateKey].push(session);
                 }
-                sessionsByDate[dateKey].push(session);
-            }
-            renderCalendar(currentDate);
-        });
+                renderCalendar(currentDate);
+            });
+    }
+
+    // Initial load
+    refreshCalendar();
 
     return {
         renderCalendar,
-        changeMonth
+        changeMonth,
+        refreshCalendar
     };
 }

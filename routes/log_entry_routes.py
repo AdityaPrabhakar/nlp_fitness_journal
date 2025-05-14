@@ -10,78 +10,8 @@ log_entry_bp = Blueprint("log_entry", __name__)
 def parse_iso_date(s):
     return datetime.strptime(s, "%Y-%m-%d").date()
 
-@log_entry_bp.route("/", methods=["GET", "POST"])
+@log_entry_bp.route("/", methods=["GET"])
 def index():
-    if request.method == "POST":
-        raw_text = request.form["entry"]
-        today_date = datetime.now().strftime("%Y-%m-%d")
-
-        try:
-            structured_response = parse_workout(raw_text)
-            print(structured_response)
-            goal_response = parse_goals(raw_text)
-
-            entries = structured_response.get("entries", [])
-            notes = structured_response.get("notes", "")
-            parsed_date = structured_response.get("date")
-            goals = goal_response.get("goals", [])
-
-            cleaned_entries = clean_entries(entries)
-
-        except Exception as e:
-            print("Error parsing:", e)
-            cleaned_entries = []
-            notes = ""
-            goals = []
-            parsed_date = None
-
-        session = None
-
-        if cleaned_entries:
-            session = WorkoutSession(
-                date=parsed_date or today_date,
-                raw_text=raw_text,
-                notes=notes
-            )
-            db.session.add(session)
-            db.session.commit()
-
-            for item in cleaned_entries:
-                entry = WorkoutEntry.from_dict(item, session.id)
-                db.session.add(entry)
-
-            flash("Workout entry created successfully!")  # ✅ Success message
-
-        for goal in goals:
-            try:
-                start_date = parse_iso_date(goal.get("start_date")) if goal.get("start_date") else date.today()
-                end_date = parse_iso_date(goal.get("end_date")) if goal.get("end_date") else None
-
-                new_goal = Goal(
-                    exercise=goal["exercise"],
-                    start_date=start_date,
-                    end_date=end_date,
-                    status="active"
-                )
-                db.session.add(new_goal)
-                db.session.flush()
-
-                for target in goal.get("targets", []):
-                    target_field = target.get("target_field")
-                    target_value = target.get("target_value")
-                    if target_field and target_value is not None:
-                        goal_target = GoalTarget(
-                            goal_id=new_goal.id,
-                            target_field=target_field,
-                            target_value=target_value
-                        )
-                        db.session.add(goal_target)
-            except Exception as e:
-                print("Error processing goal:", e)
-
-        db.session.commit()
-        return redirect("/")
-
     cardio_exercises = db.session.query(WorkoutEntry.exercise).filter_by(type='cardio').distinct().all()
     strength_exercises = db.session.query(WorkoutEntry.exercise).filter_by(type='strength').distinct().all()
 
@@ -91,6 +21,77 @@ def index():
         cardio_exercises=[e[0] for e in cardio_exercises],
         strength_exercises=[e[0] for e in strength_exercises]
     )
+
+
+@log_entry_bp.route("/api/log-workout", methods=["POST"])
+def log_workout():
+    raw_text = request.form.get("entry") or request.json.get("entry")
+    today_date = datetime.now().strftime("%Y-%m-%d")
+
+    try:
+        structured_response = parse_workout(raw_text)
+        goal_response = parse_goals(raw_text)
+
+        entries = structured_response.get("entries", [])
+        notes = structured_response.get("notes", "")
+        parsed_date = structured_response.get("date")
+        goals = goal_response.get("goals", [])
+
+        cleaned_entries = clean_entries(entries)
+
+    except Exception as e:
+        print("Error parsing:", e)
+        return jsonify({"success": False, "error": str(e)}), 400
+
+    session = None
+
+    if cleaned_entries:
+        session = WorkoutSession(
+            date=parsed_date or today_date,
+            raw_text=raw_text,
+            notes=notes
+        )
+        db.session.add(session)
+        db.session.commit()
+
+        for item in cleaned_entries:
+            entry = WorkoutEntry.from_dict(item, session.id)
+            db.session.add(entry)
+
+    for goal in goals:
+        try:
+            start_date = parse_iso_date(goal.get("start_date")) if goal.get("start_date") else date.today()
+            end_date = parse_iso_date(goal.get("end_date")) if goal.get("end_date") else None
+
+            new_goal = Goal(
+                exercise=goal["exercise"],
+                start_date=start_date,
+                end_date=end_date,
+                status="active"
+            )
+            db.session.add(new_goal)
+            db.session.flush()
+
+            for target in goal.get("targets", []):
+                target_field = target.get("target_field")
+                target_value = target.get("target_value")
+                if target_field and target_value is not None:
+                    goal_target = GoalTarget(
+                        goal_id=new_goal.id,
+                        target_field=target_field,
+                        target_value=target_value
+                    )
+                    db.session.add(goal_target)
+        except Exception as e:
+            print("Error processing goal:", e)
+
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "message": "Workout entry created successfully!",
+        "session_id": session.id if session else None
+    }), 201
+
 
 
 
