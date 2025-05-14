@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, redirect, jsonify
+from flask import Blueprint, request, render_template, redirect, jsonify, flash
 from datetime import datetime, date
 from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
 from models.goal import Goal, GoalTarget
@@ -23,7 +23,7 @@ def index():
 
             entries = structured_response.get("entries", [])
             notes = structured_response.get("notes", "")
-            parsed_date = structured_response.get("date")  # ← new line
+            parsed_date = structured_response.get("date")
             goals = goal_response.get("goals", [])
 
             cleaned_entries = clean_entries(entries)
@@ -37,10 +37,9 @@ def index():
 
         session = None
 
-        # Only create a WorkoutSession if there are workout entries
         if cleaned_entries:
             session = WorkoutSession(
-                date=parsed_date or today_date,  # ← use parsed date if available
+                date=parsed_date or today_date,
                 raw_text=raw_text,
                 notes=notes
             )
@@ -51,7 +50,8 @@ def index():
                 entry = WorkoutEntry.from_dict(item, session.id)
                 db.session.add(entry)
 
-        # Add parsed goals (even without a session)
+            flash("Workout entry created successfully!")  # ✅ Success message
+
         for goal in goals:
             try:
                 start_date = parse_iso_date(goal.get("start_date")) if goal.get("start_date") else date.today()

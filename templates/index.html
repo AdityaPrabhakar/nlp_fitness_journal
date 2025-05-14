@@ -1,9 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}Home - Fitness Journal{% endblock %}
-
 {% block content %}
 <h1 class="text-3xl font-bold text-center mt-6">📝 Natural Language Fitness Journal</h1>
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="max-w-xl mx-auto mt-6">
+      {% for message in messages %}
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
 
 {% include "partials/form.html" %}
 {% include "partials/sessions.html" %}
