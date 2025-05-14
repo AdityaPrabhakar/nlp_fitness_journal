@@ -18,6 +18,7 @@ def index():
 
         try:
             structured_response = parse_workout(raw_text)
+            print(structured_response)
             goal_response = parse_goals(raw_text)
 
             entries = structured_response.get("entries", [])
@@ -93,19 +94,20 @@ def index():
 
 @log_entry_bp.route("/api/logs/strength/<exercise>")
 def get_strength_logs(exercise):
+    # Perform a LEFT JOIN to include entries even without associated StrengthEntry
     logs = (
         db.session.query(
             StrengthEntry.set_number,
             StrengthEntry.reps,
             StrengthEntry.weight,
             WorkoutSession.date,
-            WorkoutEntry.notes
+            WorkoutEntry.notes.label('workout_entry_notes')  # Alias to avoid ambiguity
         )
-        .join(WorkoutSession)
-        .join(StrengthEntry)  # Join StrengthEntry to access strength details
+        .join(WorkoutSession, WorkoutSession.id == WorkoutEntry.session_id)  # Join WorkoutSession
+        .outerjoin(StrengthEntry, StrengthEntry.entry_id == WorkoutEntry.id)  # LEFT OUTER JOIN StrengthEntry
         .filter(
             WorkoutEntry.exercise == exercise,  # Filter by the exercise field in WorkoutEntry
-            WorkoutEntry.type == 'strength'  # Make sure we're querying for strength entries
+            WorkoutEntry.type == 'strength'  # Only strength entries
         )
         .order_by(WorkoutSession.date.desc())
         .all()
@@ -114,12 +116,16 @@ def get_strength_logs(exercise):
     return jsonify([
         {
             "date": log.date,
-            "sets": log.set_number,
-            "reps": log.reps,
-            "weight": log.weight,
-            "notes": log.notes
+            "sets": log.set_number if log.set_number is not None else None,  # Return None if no set_number
+            "reps": log.reps if log.reps is not None else None,  # Return None if no reps
+            "weight": log.weight if log.weight is not None else None,  # Return None if no weight
+            "notes": log.workout_entry_notes or None  # Return None if no notes
         } for log in logs
     ])
+
+
+
+
 
 
 @log_entry_bp.route("/api/logs/cardio/<exercise>")

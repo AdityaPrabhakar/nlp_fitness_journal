@@ -51,7 +51,7 @@ export function initCalendar(calendarEl, monthYearLabelEl, sessionModalEl, sessi
 
                                 if (entry.type === "strength" && entry.sets_details?.length) {
                                     const sets = entry.sets_details.map(set =>
-                                        `<li>Set ${set.set_number}: ${set.reps} reps @ ${set.weight ?? "bodyweight"} lbs</li>`
+                                        `<li>Set ${set.set_number}: ${set.reps} reps @ ${set.weight !== null && set.weight !== undefined ? set.weight : "X"} lbs</li>`
                                     ).join('');
                                     lines.push(`<p><strong>Sets:</strong></p><ul class="list-disc list-inside">${sets}</ul>`);
                                 }

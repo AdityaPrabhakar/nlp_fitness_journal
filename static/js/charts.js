@@ -49,49 +49,102 @@ export async function loadExerciseChart(type, exercise, canvasId) {
         destroyChart(window[canvasId + 'Chart']);
     }
 
-    // Define datasets based on exercise type (cardio or strength)
-    const datasets = type === 'cardio' ? [
-        {
-            label: 'Distance (mi)',
-            data: data.map(d => d.distance || 0),
-            borderColor: 'purple',
-            yAxisID: 'y1',
-            tension: 0.3
-        },
-        {
-            label: 'Duration (min)',
-            data: data.map(d => d.duration || 0),
-            borderColor: 'orange',
-            yAxisID: 'y2',
-            tension: 0.3
-        }
-    ] : [
-        {
-            label: 'Volume (sets × reps)',
-            data: data.map(d => d.volume || 0),  // Volume is calculated as sum of set × reps in backend
-            backgroundColor: 'red',
-            yAxisID: 'y1',
-            barThickness: 20
-        },
-        {
-            label: 'Max Weight (lbs)',
-            data: data.map(d => d.max_weight || 0),  // Max weight is calculated as the highest weight lifted
-            backgroundColor: 'blue',
-            yAxisID: 'y2',
-            barThickness: 20
-        }
-    ];
+    // Prepare the dataset with reps, weight, and set_number
+    const weightData = data.map(d => ({
+        set_number: d.set_number,
+        weight: d.weight,
+        date: d.date
+    }));
+
+    const repsData = data.map(d => ({
+        set_number: d.set_number,
+        reps: d.reps,
+        date: d.date
+    }));
+
+    let datasets = [];
+
+    if (type === 'cardio') {
+        // Cardio charts (Line chart)
+        datasets = [
+            {
+                label: 'Distance (mi)',
+                data: data.map(d => d.distance || 0),
+                borderColor: 'purple',
+                yAxisID: 'y1',
+                tension: 0.3
+            },
+            {
+                label: 'Duration (min)',
+                data: data.map(d => d.duration || 0),
+                borderColor: 'orange',
+                yAxisID: 'y2',
+                tension: 0.3
+            }
+        ];
+    } else {
+        // Strength charts (Bar chart)
+        datasets = [
+            {
+                label: 'Weight (lbs)',
+                data: weightData.map(d => d.weight),
+                backgroundColor: 'blue',  // Color for weight bars
+                yAxisID: 'y1',
+                barThickness: 20
+            },
+            {
+                label: 'Reps',
+                data: repsData.map(d => d.reps),
+                backgroundColor: 'green',  // Color for reps bars
+                yAxisID: 'y2',
+                barThickness: 20
+            }
+        ];
+    }
 
     const config = {
-        type: type === 'cardio' ? 'line' : 'bar',
+        type: type === 'cardio' ? 'line' : 'bar',  // Cardio gets a line chart, strength gets a bar chart
         data: {
-            labels: data.map(d => d.date),
+            labels: data.map(d => d.date),  // Use the date as labels on the x-axis
             datasets: datasets
         },
         options: {
             scales: {
-                y1: { type: 'linear', position: 'left' },
-                y2: { type: 'linear', position: 'right', grid: { drawOnChartArea: false } }
+                y1: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'Weight (lbs)' }
+                },
+                y2: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'Reps' },
+                    grid: { drawOnChartArea: false }
+                },
+                x: {
+                    type: 'category',
+                    title: { display: true, text: 'Date' },
+                    labels: data.map(d => d.date)  // Labels will be the workout dates
+                },
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        // Customize the tooltip to show both reps and weight for each set
+                        label: function(tooltipItem) {
+                            const dataSet = tooltipItem.datasetIndex === 0 ? weightData : repsData;
+                            const setData = dataSet[tooltipItem.dataIndex];  // Get the set data based on index
+
+                            if (tooltipItem.datasetIndex === 0) {
+                                // Weight dataset
+                                return `Set ${setData.set_number}: ${setData.weight} lbs`;
+                            } else if (tooltipItem.datasetIndex === 1) {
+                                // Reps dataset
+                                return `Set ${setData.set_number}: ${setData.reps} reps`;
+                            }
+                        }
+                    }
+                }
             }
         }
     };

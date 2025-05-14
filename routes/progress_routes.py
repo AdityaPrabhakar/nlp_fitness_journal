@@ -44,16 +44,18 @@ def strength_progress(exercise):
     results = db.session.execute(text("""
         SELECT
             ws.date,
-            SUM(se.reps * COALESCE(se.weight, 0)) AS volume,
-            MAX(se.weight) AS max_weight
-        FROM strength_entry se
-        JOIN workout_entry we ON we.id = se.entry_id
+            se.set_number,
+            se.reps,
+            se.weight
+        FROM workout_entry we
         JOIN workout_session ws ON ws.id = we.session_id
+        LEFT JOIN strength_entry se ON we.id = se.entry_id
         WHERE LOWER(we.exercise) = :exercise
-        GROUP BY ws.date
         ORDER BY ws.date
     """), {"exercise": exercise.lower()}).fetchall()
 
     return jsonify([
-        {"date": r[0], "volume": r[1], "max_weight": r[2]} for r in results
+        {"date": r[0], "set_number": r[1], "reps": r[2], "weight": r[3]} for r in results
     ])
+
+

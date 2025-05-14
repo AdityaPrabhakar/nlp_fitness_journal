@@ -67,7 +67,7 @@ def parse_workout(text):
     """
 
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4",
         messages=[
             {"role": "system", "content": "You are a helpful assistant that formats workout entries into strict JSON."},
             {"role": "user", "content": prompt}
@@ -153,7 +153,7 @@ Never include nulls or explanations.
 """
 
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4",
         messages=[
             {"role": "system", "content": "You extract structured fitness goals from journal text."},
             {"role": "user", "content": prompt}
