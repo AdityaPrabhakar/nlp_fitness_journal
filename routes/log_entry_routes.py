@@ -14,7 +14,7 @@ def parse_iso_date(s):
 def index():
     if request.method == "POST":
         raw_text = request.form["entry"]
-        now_date = datetime.now().strftime("%Y-%m-%d")
+        today_date = datetime.now().strftime("%Y-%m-%d")
 
         try:
             structured_response = parse_workout(raw_text)
@@ -23,6 +23,7 @@ def index():
 
             entries = structured_response.get("entries", [])
             notes = structured_response.get("notes", "")
+            parsed_date = structured_response.get("date")  # ← new line
             goals = goal_response.get("goals", [])
 
             cleaned_entries = clean_entries(entries)
@@ -32,13 +33,14 @@ def index():
             cleaned_entries = []
             notes = ""
             goals = []
+            parsed_date = None
 
         session = None
 
         # Only create a WorkoutSession if there are workout entries
         if cleaned_entries:
             session = WorkoutSession(
-                date=now_date,
+                date=parsed_date or today_date,  # ← use parsed date if available
                 raw_text=raw_text,
                 notes=notes
             )
@@ -89,6 +91,7 @@ def index():
         cardio_exercises=[e[0] for e in cardio_exercises],
         strength_exercises=[e[0] for e in strength_exercises]
     )
+
 
 
 

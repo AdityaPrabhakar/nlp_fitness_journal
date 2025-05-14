@@ -4,14 +4,21 @@ from openai import OpenAI
 client = OpenAI()
 
 
-# noinspection PyTypeChecker
+from datetime import date
+
 def parse_workout(text):
+    today = date.today().isoformat()
+
     prompt = f"""
     You are a fitness assistant. A user will describe their workout in natural language.
     Convert it into a strict JSON object with only the fields needed.
 
+    ### Context:
+    Today's date is {today}. Use this to resolve any relative dates like "yesterday", "last week", "on Monday", etc.
+
     ### Required JSON structure:
-    Always return a dictionary with exactly two keys:
+    Always return a dictionary with the following keys:
+    - "date": ISO format date string (YYYY-MM-DD), **only if a specific or relative date is mentioned** in the text
     - "entries": a list of workout items
     - "notes": a general string (can be empty if nothing general to say)
 
@@ -24,7 +31,7 @@ def parse_workout(text):
     For strength training, include:
     - "sets_details": a list of sets, each with:
         - "set_number": the set index (1-based)
-        - "reps": number of reps
+        - "reps": number of reps (if not mentioned, omit or set to null)
         - "weight": weight used (if mentioned; otherwise omit)
 
     For cardio, include:
@@ -34,32 +41,26 @@ def parse_workout(text):
     ### Example output:
 
     {{
+      "date": "2024-05-11",
       "entries": [
         {{
           "type": "strength",
           "exercise": "bench press",
           "sets_details": [
             {{ "set_number": 1, "reps": 8, "weight": 135 }},
-            {{ "set_number": 2, "reps": 6, "weight": 155 }},
-            {{ "set_number": 3, "reps": 6, "weight": 155 }}
+            {{ "set_number": 2, "reps": 6, "weight": 155 }}
           ],
-          "notes": "Felt strong today"
-        }},
-        {{
-          "type": "cardio",
-          "exercise": "running",
-          "duration": 30,
-          "distance": 3.0,
-          "notes": "Jogged in the park"
+          "notes": "Felt strong"
         }}
       ],
-      "notes": "Solid session overall."
+      "notes": "Quick strength session."
     }}
 
     ### Rules:
+    - Use the provided date context to convert relative dates into absolute ones.
+    - Only include "date" if a specific or relative date is mentioned.
+    - Do not guess a date if none is mentioned — just omit the "date" key.
     - Only include relevant keys. Do not include null, empty strings, or empty arrays.
-    - Only include actual workouts — completed activities, not future intentions.
-    - Top-level "notes" should summarize the entire workout.
     - Do NOT return explanations. Only return valid, parsable JSON.
 
     ### Input:
@@ -77,6 +78,7 @@ def parse_workout(text):
 
     content = response.choices[0].message.content
     return json.loads(content)
+
 
 def clean_entry(entry):
     """Fixes and enriches a single workout entry."""
