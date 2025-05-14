@@ -6,5 +6,5 @@ class StrengthEntry(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     entry_id = db.Column(db.Integer, db.ForeignKey('workout_entry.id'), nullable=False)
     set_number = db.Column(db.Integer, nullable=False)
-    reps = db.Column(db.Integer, nullable=False)
+    reps = db.Column(db.Integer, nullable=True)  # Change from nullable=False to nullable=True
     weight = db.Column(db.Float, nullable=True)
