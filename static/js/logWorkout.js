@@ -20,7 +20,9 @@ export function setupWorkoutLogging(calendarManager) {
         const result = await response.json();
 
         if (response.ok && result.success) {
-            window.location.reload(); // Let server flash message show
+            alert(result.message); // ✅ Display flash-like success
+            document.getElementById('entryText').value = '';
+            calendarManager.refreshCalendar(); // ✅ Refresh calendar
         } else {
             alert("Error logging workout: " + (result.message || result.error));
         }

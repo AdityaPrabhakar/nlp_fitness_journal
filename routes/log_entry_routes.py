@@ -92,8 +92,75 @@ def log_workout():
         "session_id": session.id if session else None
     }), 201
 
+@log_entry_bp.route("/api/edit-workout/<int:session_id>", methods=["POST"])
+def edit_workout(session_id):
+    print(f"[INFO] Received request to edit session {session_id}")
 
+    raw_text = request.form.get("raw_text") or request.json.get("raw_text")
+    print(f"[DEBUG] Raw text received:\n{raw_text}")
 
+    if not raw_text:
+        print("[ERROR] No entry provided in the request")
+        return jsonify({"success": False, "error": "No entry provided."}), 400
+
+    session = db.session.get(WorkoutSession, session_id)
+    if not session:
+        print(f"[ERROR] Workout session with ID {session_id} not found")
+        return jsonify({"success": False, "error": "Workout session not found."}), 404
+
+    try:
+        structured_response = parse_workout(raw_text)
+        print(f"[DEBUG] Structured response: {structured_response}")
+
+        entries = structured_response.get("entries", [])
+        notes = structured_response.get("notes", "")
+        parsed_date = structured_response.get("date")
+        cleaned_entries = clean_entries(entries)
+        print(f"[INFO] Parsed {len(cleaned_entries)} cleaned entries")
+
+    except Exception as e:
+        print(f"[ERROR] Exception while parsing workout text: {e}")
+        return jsonify({"success": False, "error": str(e)}), 400
+
+    try:
+        # Get all WorkoutEntry IDs for the session
+        entry_ids = [e.id for e in WorkoutEntry.query.filter_by(session_id=session.id).all()]
+        print(f"[INFO] Found {len(entry_ids)} workout entries to delete associated strength/cardio data")
+
+        # Delete associated StrengthEntry and CardioEntry records
+        strength_deleted = StrengthEntry.query.filter(StrengthEntry.entry_id.in_(entry_ids)).delete(synchronize_session=False)
+        cardio_deleted = CardioEntry.query.filter(CardioEntry.entry_id.in_(entry_ids)).delete(synchronize_session=False)
+        print(f"[INFO] Deleted {strength_deleted} strength entries and {cardio_deleted} cardio entries")
+
+        # Delete the WorkoutEntry records themselves
+        workout_deleted = WorkoutEntry.query.filter(WorkoutEntry.id.in_(entry_ids)).delete(synchronize_session=False)
+        print(f"[INFO] Deleted {workout_deleted} workout entries")
+
+        # Re-create updated WorkoutEntries
+        for idx, item in enumerate(cleaned_entries):
+            print(f"[INFO] Creating entry {idx + 1}: {item}")
+            entry = WorkoutEntry.from_dict(item, session.id)
+            db.session.add(entry)
+
+        # Update session metadata
+        session.raw_text = raw_text
+        session.notes = notes
+        if parsed_date:
+            session.date = parsed_date
+
+        db.session.commit()
+        print(f"[SUCCESS] Workout session {session.id} updated successfully")
+
+        return jsonify({
+            "success": True,
+            "message": "Workout session updated successfully!",
+            "session_id": session.id
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERROR] Exception while updating workout session: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @log_entry_bp.route("/api/logs/strength/<exercise>")
