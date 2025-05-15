@@ -87,7 +87,7 @@ export function initCalendar(calendarEl, monthYearLabelEl, sessionModalEl, sessi
                 <div class="mb-6 border border-gray-300 rounded p-3">
                     <p class="font-semibold">Session ${index + 1}</p>
                     <p><strong>Notes:</strong> ${data.notes || 'None'}</p>
-                    <label class="block mt-2 text-sm font-medium text-gray-700">Raw Text:</label>
+                    <label class="block mt-2 text-sm font-medium text-gray-700">Journal Entry:</label>
                     <textarea id="${rawTextId}" class="w-full border rounded p-2 mt-1 text-sm" rows="4">${data.raw_text || ''}</textarea>
                     <button id="${saveBtnId}" class="mt-2 px-3 py-1 text-white bg-blue-600 hover:bg-blue-700 rounded text-sm">Save Changes</button>
                     <hr class="my-3" />
