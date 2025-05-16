@@ -55,7 +55,7 @@ def log_workout():
         db.session.commit()
 
         # 🧠 PR Tracking moved to helper
-        new_prs = track_prs_for_session(cleaned_entries, session.id)
+        new_prs = track_prs_for_session(session, cleaned_entries)
 
     return jsonify({
         "success": True,
