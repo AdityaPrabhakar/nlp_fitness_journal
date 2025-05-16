@@ -57,6 +57,10 @@ export function initCalendar(calendarEl, monthYearLabelEl, sessionModalEl, sessi
 
     function renderModal(allData) {
         const content = allData.map((data, index) => {
+            const rawTextId = `raw-text-${data.session_id}`;
+            const editBtnId = `edit-btn-${data.session_id}`;
+            const saveBtnId = `save-btn-${data.session_id}`;
+
             const entriesHtml = data.entries.map(entry => {
                 const lines = [];
                 if (entry.exercise) lines.push(`<p><strong>Exercise:</strong> ${entry.exercise}</p>`);
@@ -80,16 +84,16 @@ export function initCalendar(calendarEl, monthYearLabelEl, sessionModalEl, sessi
                 return `<div class="mb-2 p-2 border rounded">${lines.join('')}</div>`;
             }).join('');
 
-            const rawTextId = `raw-text-${data.session_id}`;
-            const saveBtnId = `save-btn-${data.session_id}`;
-
             return `
                 <div class="mb-6 border border-gray-300 rounded p-3">
                     <p class="font-semibold">Session ${index + 1}</p>
                     <p><strong>Notes:</strong> ${data.notes || 'None'}</p>
-                    <label class="block mt-2 text-sm font-medium text-gray-700">Journal Entry:</label>
-                    <textarea id="${rawTextId}" class="w-full border rounded p-2 mt-1 text-sm" rows="4">${data.raw_text || ''}</textarea>
-                    <button id="${saveBtnId}" class="mt-2 px-3 py-1 text-white bg-blue-600 hover:bg-blue-700 rounded text-sm">Save Changes</button>
+                    <label class="block mt-2 text-sm font-medium text-gray-700">Raw Text:</label>
+                    <textarea id="${rawTextId}" class="w-full border rounded p-2 mt-1 text-sm" rows="4" disabled>${data.raw_text || ''}</textarea>
+                    <div class="mt-2 space-x-2">
+                        <button id="${editBtnId}" class="px-3 py-1 text-blue-600 border border-blue-600 rounded text-sm hover:bg-blue-50">Edit Journal Entry</button>
+                        <button id="${saveBtnId}" class="px-3 py-1 text-white bg-blue-600 hover:bg-blue-700 rounded text-sm hidden">Save Changes</button>
+                    </div>
                     <hr class="my-3" />
                     <div>${entriesHtml || '<p>No entries</p>'}</div>
                 </div>
@@ -98,26 +102,33 @@ export function initCalendar(calendarEl, monthYearLabelEl, sessionModalEl, sessi
 
         openModal(`<p><strong>Date:</strong> ${allData[0]?.date}</p><div class="mt-4">${content}</div>`);
 
-        // Attach save event listeners
         allData.forEach(data => {
-            const saveBtn = document.getElementById(`save-btn-${data.session_id}`);
-            const textarea = document.getElementById(`raw-text-${data.session_id}`);
+            const sessionId = data.session_id;
+            const textarea = document.getElementById(`raw-text-${sessionId}`);
+            const editBtn = document.getElementById(`edit-btn-${sessionId}`);
+            const saveBtn = document.getElementById(`save-btn-${sessionId}`);
 
-            if (saveBtn && textarea) {
+            if (editBtn && textarea && saveBtn) {
+                editBtn.addEventListener('click', () => {
+                    textarea.disabled = false;
+                    textarea.focus();
+                    saveBtn.classList.remove('hidden');
+                    editBtn.remove(); // Remove edit button after making textarea editable
+                });
+
                 saveBtn.addEventListener('click', () => {
                     const updatedRaw = textarea.value;
 
-                    fetch(`/api/edit-workout/${data.session_id}`, {
+                    fetch(`/api/edit-workout/${sessionId}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ raw_text: updatedRaw })
                     }).then(response => {
                         if (response.ok) {
-                            // Re-fetch this session and re-render the modal
-                            fetch(`/api/session/${data.session_id}`)
+                            fetch(`/api/session/${sessionId}`)
                                 .then(res => res.json())
                                 .then(updatedSession => {
-                                    renderModal([{ ...updatedSession, session_id: data.session_id }]);  // <-- key fix here
+                                    renderModal([{ ...updatedSession, session_id: sessionId }]);
                                     refreshCalendar();
                                 });
                         } else {
