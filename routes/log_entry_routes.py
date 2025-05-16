@@ -1,8 +1,8 @@
 from flask import Blueprint, request, render_template, redirect, jsonify, flash
 from datetime import datetime, date
-from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
-from models.goal import Goal, GoalTarget
-from utils.openai_utils import parse_workout, clean_entries, parse_goals
+from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry, PersonalRecord
+from utils import track_prs_for_session
+from utils.openai_utils import parse_workout, clean_entries
 from init import db
 
 log_entry_bp = Blueprint("log_entry", __name__)
@@ -27,20 +27,15 @@ def index():
 def log_workout():
     raw_text = request.form.get("entry") or request.json.get("entry")
     today_date = datetime.now().strftime("%Y-%m-%d")
+    new_prs = []
 
     try:
         structured_response = parse_workout(raw_text)
-        goal_response = parse_goals(raw_text)
-
         entries = structured_response.get("entries", [])
         notes = structured_response.get("notes", "")
         parsed_date = structured_response.get("date")
-        goals = goal_response.get("goals", [])
-
         cleaned_entries = clean_entries(entries)
-
     except Exception as e:
-        print("Error parsing:", e)
         return jsonify({"success": False, "error": str(e)}), 400
 
     session = None
@@ -49,7 +44,7 @@ def log_workout():
         session = WorkoutSession(
             date=parsed_date or today_date,
             raw_text=raw_text,
-            notes=notes
+            notes=notes,
         )
         db.session.add(session)
         db.session.commit()
@@ -57,40 +52,19 @@ def log_workout():
         for item in cleaned_entries:
             entry = WorkoutEntry.from_dict(item, session.id)
             db.session.add(entry)
+        db.session.commit()
 
-    for goal in goals:
-        try:
-            start_date = parse_iso_date(goal.get("start_date")) if goal.get("start_date") else date.today()
-            end_date = parse_iso_date(goal.get("end_date")) if goal.get("end_date") else None
+        # 🧠 PR Tracking moved to helper
+        new_prs = track_prs_for_session(cleaned_entries, session.id)
 
-            new_goal = Goal(
-                exercise=goal["exercise"],
-                start_date=start_date,
-                end_date=end_date,
-                status="active"
-            )
-            db.session.add(new_goal)
-            db.session.flush()
-
-            for target in goal.get("targets", []):
-                target_field = target.get("target_field")
-                target_value = target.get("target_value")
-                if target_field and target_value is not None:
-                    goal_target = GoalTarget(
-                        goal_id=new_goal.id,
-                        target_field=target_field,
-                        target_value=target_value
-                    )
-                    db.session.add(goal_target)
-        except Exception as e:
-            print("Error processing goal:", e)
-
-    db.session.commit()
     return jsonify({
         "success": True,
         "message": "Workout entry created successfully!",
-        "session_id": session.id if session else None
+        "session_id": session.id if session else None,
+        "new_prs": new_prs
     }), 201
+
+
 
 @log_entry_bp.route("/api/edit-workout/<int:session_id>", methods=["POST"])
 def edit_workout(session_id):
@@ -148,19 +122,27 @@ def edit_workout(session_id):
         if parsed_date:
             session.date = parsed_date
 
+        db.session.flush()  # Ensure new entries are staged in the session
+
+        # 🏅 Track personal records
+        new_prs = track_prs_for_session(session, cleaned_entries)
+        print(f"[INFO] New PRs: {new_prs}")
+
         db.session.commit()
         print(f"[SUCCESS] Workout session {session.id} updated successfully")
 
         return jsonify({
             "success": True,
             "message": "Workout session updated successfully!",
-            "session_id": session.id
+            "session_id": session.id,
+            "new_prs": new_prs
         }), 200
 
     except Exception as e:
         db.session.rollback()
         print(f"[ERROR] Exception while updating workout session: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 
 @log_entry_bp.route("/api/logs/strength/<exercise>")

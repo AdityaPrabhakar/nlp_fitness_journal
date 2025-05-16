@@ -1,4 +1,5 @@
 import { openModal } from './modal.js';
+import { showPRToast } from './toast.js';
 
 export function initCalendar(calendarEl, monthYearLabelEl, sessionModalEl, sessionDetailsEl) {
     const sessionsByDate = {};
@@ -123,13 +124,19 @@ export function initCalendar(calendarEl, monthYearLabelEl, sessionModalEl, sessi
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ raw_text: updatedRaw })
-                    }).then(response => {
+                    }).then(async response => {
                         if (response.ok) {
+                            const result = await response.json();
+
                             fetch(`/api/session/${sessionId}`)
                                 .then(res => res.json())
                                 .then(updatedSession => {
                                     renderModal([{ ...updatedSession, session_id: sessionId }]);
                                     refreshCalendar();
+
+                                    if (result.new_prs && result.new_prs.length > 0) {
+                                        showPRToast(result.new_prs);
+                                    }
                                 });
                         } else {
                             alert('Failed to update workout.');
