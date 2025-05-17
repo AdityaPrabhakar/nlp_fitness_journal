@@ -1,4 +1,18 @@
-<form id="logForm" class="text-center mt-6">
-    <textarea id="entryText" name="entry" rows="4" cols="50" placeholder="Describe your workout..." class="border rounded p-2"></textarea><br>
-    <button type="submit" class="bg-blue-500 text-white p-2 rounded mt-4">Log Workout</button>
-</form>
+<!-- templates/form.html -->
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="max-w-2xl mx-auto mt-10">
+    {% include 'partials/go_back_home_button.html' %}
+    {% include 'partials/modal.html' %}
+    <h1 class="text-2xl font-bold mb-4 text-center">Log Your Workout</h1>
+    <form id="logForm" class="text-center mt-6">
+      <textarea id="entryText" name="entry" rows="4" cols="50" placeholder="Describe your workout... feel free to include information on reps, sets, weight, distance, or duration, and also any other notes you want to include!" class="border rounded p-2"></textarea><br>
+      <button type="submit" class="bg-blue-500 text-white p-2 rounded mt-4">Log Workout</button>
+    </form>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/log.js') }}"></script>
+{% endblock %}

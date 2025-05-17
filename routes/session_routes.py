@@ -1,8 +1,12 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, render_template
 from models import WorkoutSession, WorkoutEntry
 from models import StrengthEntry, CardioEntry  # Assuming this won't cause circular import
 
 session_bp = Blueprint('session', __name__)
+
+@session_bp.route("/view-entries")
+def view_entries():
+    return render_template("partials/sessions.html")
 
 # Endpoint to fetch all workout sessions
 @session_bp.route('/api/sessions', methods=['GET'])

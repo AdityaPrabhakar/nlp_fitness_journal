@@ -1,14 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 class="text-3xl font-bold text-center mt-6">📝 Natural Language Fitness Journal</h1>
+<h1 class="text-3xl font-bold text-center mt-6">Weekly Snapshot</h1>
 
 {% include "partials/summary_dashboard.html" %}
-{% include "partials/form.html" %}
-{% include "partials/sessions.html" %}
+{% include 'partials/buttons.html' %}
 {% endblock %}
 
 {% block scripts %}
-<script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='js/summaryDashboard.js') }}"></script>
 {% endblock %}

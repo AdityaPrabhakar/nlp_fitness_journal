@@ -1,0 +1,19 @@
+<div class="text-center my-8 flex justify-center gap-6 flex-wrap">
+  <!-- Log Journal Entry Button -->
+  <a href="{{ url_for('log_entry.show_log_form') }}"
+     class="inline-flex flex-col items-center justify-center w-48 h-48 bg-white hover:bg-gray-100 text-blue-700 text-center font-semibold rounded-lg shadow-lg transition duration-200 border border-gray-300 p-4">
+    <img src="{{ url_for('static', filename='images/journal-icon.png') }}"
+         alt="Journal Icon"
+         class="w-20 h-20 mb-2" />
+    <span class="text-base leading-tight break-words text-center">Log Journal Entry</span>
+  </a>
+
+  <!-- View Journal Entries Button -->
+  <a href="{{ url_for('session.view_entries') }}"
+     class="inline-flex flex-col items-center justify-center w-48 h-48 bg-white hover:bg-gray-100 text-blue-700 text-center font-semibold rounded-lg shadow-lg transition duration-200 border border-gray-300 p-4">
+    <img src="{{ url_for('static', filename='images/calendar-icon.png') }}"
+         alt="Calendar Icon"
+         class="w-20 h-20 mb-2" />
+    <span class="text-base leading-tight break-words text-center">View Journal Entries</span>
+  </a>
+</div>

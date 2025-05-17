@@ -1,29 +1,30 @@
-<h2 class="text-2xl font-semibold mt-8 text-center">📅 Logged Sessions</h2>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workout Sessions Calendar</title>
 
-<!-- Toggle Button -->
-<div class="text-center mt-4 mb-2">
-    <button id="toggleCalendarBtn" class="bg-blue-500 text-white px-4 py-2 rounded">
-        View Journal Entries
-    </button>
-</div>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-<!-- Hidden Calendar Container -->
-<div id="calendarContainer" class="hidden transition-all duration-300">
+  <!-- FullCalendar -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
 
-    <div class="flex justify-between items-center mt-4 mb-2">
-        <button id="prevMonth" class="text-blue-500 hover:underline">&larr; Previous</button>
-        <h3 id="monthYear" class="text-lg font-semibold"></h3>
-        <button id="nextMonth" class="text-blue-500 hover:underline">Next &rarr;</button>
-    </div>
+  <div class="container mx-auto px-4 py-8">
+    {% include 'partials/go_back_home_button.html' %}
+    <h1 class="text-3xl font-bold mb-6 text-center">📅 Logged Workout Sessions</h1>
 
-    <div class="grid grid-cols-7 gap-2 text-center font-semibold text-sm text-gray-600">
-        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
-    </div>
+    <!-- Calendar -->
+    <div id="calendar" class="bg-white rounded shadow p-4"></div>
+  </div>
 
-    <div id="calendar" class="grid grid-cols-7 gap-2 mt-2">
-        <!-- JS will populate this -->
-    </div>
+  <!-- Include session modal HTML -->
+  {% include 'partials/modal.html' %}
 
-</div>
-
-{% include "partials/modal.html" %}
+  <!-- Load JS modules -->
+  <script type="module" src="/static/js/calendar.js"></script>
+</body>
+</html>

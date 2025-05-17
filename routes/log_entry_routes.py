@@ -22,6 +22,10 @@ def index():
         strength_exercises=[e[0] for e in strength_exercises]
     )
 
+@log_entry_bp.route("/log-entry")
+def show_log_form():
+    return render_template("partials/form.html")
+
 
 @log_entry_bp.route("/api/log-workout", methods=["POST"])
 def log_workout():

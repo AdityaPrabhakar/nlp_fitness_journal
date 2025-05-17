@@ -110,10 +110,6 @@ async function renderStrengthChart() {
       layout: { padding: 0 },
       plugins: {
         legend: { display: false },
-        title: {
-          display: true,
-          text: 'Total Sets per Exercise (Past 7 Days)'
-        }
       },
       scales: {
         x: {

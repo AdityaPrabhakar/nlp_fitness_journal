@@ -10,6 +10,9 @@
     <orderEntry type="jdk" jdkName="Python 3.12 (nlp_fitness_journal)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="chart.js" level="application" />
+    <orderEntry type="library" name="@fullcalendar/daygrid" level="application" />
+    <orderEntry type="library" name="@fullcalendar/core" level="application" />
+    <orderEntry type="library" name="fullcalendar" level="application" />
   </component>
   <component name="TemplatesService">
     <option name="TEMPLATE_CONFIGURATION" value="Jinja2" />

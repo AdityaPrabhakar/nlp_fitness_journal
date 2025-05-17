@@ -1,61 +1,57 @@
-export async function loadLogTable(type, exercise, tableId) {
-    const res = await fetch(`/api/logs/${type}/${exercise}`);
-    const data = await res.json();
+// static/js/log.js
+import { showPRToast } from './toast.js';
+import { openModal, setupModalTriggers } from './modal.js';
+import { renderSessionDetails } from './sessionRenderer.js';
 
-    const table = document.getElementById(tableId);
-    const thead = table.querySelector("thead");
-    const tbody = table.querySelector("tbody");
+document.addEventListener('DOMContentLoaded', () => {
+  setupModalTriggers();
+  const logForm = document.getElementById('logForm');
+  if (!logForm) return;
 
-    if (type === 'cardio') {
-        thead.innerHTML = "<tr><th>Date</th><th>Duration</th><th>Distance</th></tr>";
+  logForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-        const rows = data.map(entry => {
-            const mainRow = `
-                <tr>
-                    <td>${entry.date}</td>
-                    <td>${entry.duration ?? '-'}</td>
-                    <td>${entry.distance ?? '-'}</td>
-                </tr>
-            `;
+    const entryText = document.getElementById('entryText').value.trim();
+    if (!entryText) return;
 
-            const noteRow = entry.notes
-                ? `<tr><td colspan="3"><em>Note:</em> ${entry.notes}</td></tr>`
-                : '';
+    try {
+      const response = await fetch('/api/log-workout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ entry: entryText })
+      });
 
-            return mainRow + noteRow;
-        }).join('');
+      const result = await response.json();
 
-        tbody.innerHTML = rows;
-    } else {
-        thead.innerHTML = "<tr><th>Date</th><th>Set</th><th>Reps</th><th>Weight</th></tr>";
+      if (response.ok && result.success) {
+        document.getElementById('entryText').value = '';
 
-        // Group sets by date
-        const grouped = {};
-        data.forEach(entry => {
-            if (!grouped[entry.date]) {
-                grouped[entry.date] = [];
-            }
-            grouped[entry.date].push(entry);
-        });
+        if (result.new_prs?.length) {
+          showPRToast(result.new_prs);
+        }
 
-        // Build rows: one per set, plus a notes row per workout
-        const rows = Object.entries(grouped).map(([date, sets]) => {
-            const setRows = sets.map((set, i) => `
-                <tr>
-                    <td>${i === 0 ? date : ''}</td>
-                    <td>${set.sets ?? 'X'}</td>
-                    <td>${set.reps ?? 'X'}</td>
-                    <td>${set.weight != null ? set.weight : 'X'}</td>
-                </tr>
-            `).join('');
+        const sessionId = result.session_id;
+        const sessionRes = await fetch(`/api/session/${sessionId}`);
+        const sessionData = await sessionRes.json();
 
-            const noteRow = sets[0].notes
-                ? `<tr><td colspan="4"><em>Note:</em> ${sets[0].notes}</td></tr>`
-                : '';
+        const content = `
+          <div class="max-h-[80vh] overflow-y-auto pr-2">
+            <div class="bg-white p-4 shadow rounded-lg border">
+              ${renderSessionDetails(sessionData)}
+            </div>
+          </div>
+        `;
 
-            return setRows + noteRow;
-        }).join('');
+        openModal(content, { title: 'Workout Session Insights', size: 'xl' });
 
-        tbody.innerHTML = rows;
+      } else {
+        alert("Error logging workout: " + (result.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Log form error:", err);
+      alert("Failed to log workout.");
     }
-}
+  });
+});
