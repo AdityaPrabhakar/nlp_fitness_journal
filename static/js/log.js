@@ -1,7 +1,6 @@
 // static/js/log.js
 import { showPRToast } from './toast.js';
 import { openModal, setupModalTriggers } from './modal.js';
-import { renderSessionDetails } from './sessionRenderer.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   setupModalTriggers();
@@ -32,19 +31,20 @@ document.addEventListener('DOMContentLoaded', () => {
           showPRToast(result.new_prs);
         }
 
-        const sessionId = result.session_id;
-        const sessionRes = await fetch(`/api/session/${sessionId}`);
-        const sessionData = await sessionRes.json();
+        // Optional: Fetch session if needed later
+        // const sessionId = result.session_id;
+        // const sessionRes = await fetch(`/api/session/${sessionId}`);
+        // const sessionData = await sessionRes.json();
 
+        // Build modal content
         const content = `
-          <div class="max-h-[80vh] overflow-y-auto pr-2">
-            <div class="bg-white p-4 shadow rounded-lg border">
-              ${renderSessionDetails(sessionData)}
-            </div>
+          <div class="text-center p-4">
+            <h2 class="text-2xl font-bold mb-2">Journal Entry Created!</h2>
+            <p class="text-gray-600 text-lg">Workout Insights</p>
           </div>
         `;
 
-        openModal(content, { title: 'Workout Session Insights', size: 'xl' });
+        openModal(content, { title: 'Success', size: 'md' });
 
       } else {
         alert("Error logging workout: " + (result.error || "Unknown error"));
