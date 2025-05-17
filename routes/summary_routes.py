@@ -1,0 +1,170 @@
+from datetime import datetime, timedelta
+from flask import Blueprint, jsonify, request
+from sqlalchemy import func
+
+from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry, PersonalRecord
+from init import db
+
+summary_bp = Blueprint("summary", __name__)
+
+@summary_bp.route("/api/summary/overview", methods=["GET"])
+def summary_overview():
+    days = request.args.get("days", default=7, type=int)
+    start_date = datetime.now().date() - timedelta(days=days)
+
+    # Total sessions in timeframe
+    total_sessions = db.session.query(WorkoutSession).filter(
+        WorkoutSession.date >= start_date
+    ).count()
+
+    # Get session IDs with strength entries
+    strength_session_ids = db.session.query(WorkoutEntry.session_id).filter(
+        WorkoutEntry.type == "strength"
+    ).distinct().all()
+    strength_session_ids = {sid for (sid,) in strength_session_ids}
+
+    # Get session IDs with cardio entries
+    cardio_session_ids = db.session.query(WorkoutEntry.session_id).filter(
+        WorkoutEntry.type == "cardio"
+    ).distinct().all()
+    cardio_session_ids = {sid for (sid,) in cardio_session_ids}
+
+    # Get sessions within the timeframe
+    recent_session_ids = db.session.query(WorkoutSession.id).filter(
+        WorkoutSession.date >= start_date
+    ).all()
+    recent_session_ids = {sid for (sid,) in recent_session_ids}
+
+    strength_sessions = len(recent_session_ids & strength_session_ids)
+    cardio_sessions = len(recent_session_ids & cardio_session_ids)
+
+    return jsonify({
+        "success": True,
+        "total_sessions": total_sessions,
+        "strength_sessions": strength_sessions,
+        "cardio_sessions": cardio_sessions
+    })
+
+
+@summary_bp.route("/api/summary/cardio", methods=["GET"])
+def cardio_summary():
+    try:
+        days = int(request.args.get("days", 7))
+        if days < 1 or days > 90:
+            return jsonify({"success": False, "error": "Days must be between 1 and 90"}), 400
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid days parameter"}), 400
+
+    today = datetime.now().date()
+    start_date = today - timedelta(days=days - 1)
+
+    # Build empty map for each day
+    date_labels = [(start_date + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(days)]
+    summary_map = {date: {"total_distance": 0.0, "total_duration": 0.0} for date in date_labels}
+
+    results = (
+        db.session.query(
+            WorkoutSession.date,
+            func.sum(CardioEntry.distance).label("total_distance"),
+            func.sum(CardioEntry.duration).label("total_duration")
+        )
+        .join(WorkoutEntry, WorkoutEntry.session_id == WorkoutSession.id)
+        .join(CardioEntry, CardioEntry.entry_id == WorkoutEntry.id)
+        .filter(WorkoutSession.date >= start_date)
+        .group_by(WorkoutSession.date)
+        .all()
+    )
+
+    for row in results:
+        date_str = str(row.date)
+        if date_str in summary_map:
+            summary_map[date_str]["total_distance"] = float(row.total_distance or 0)
+            summary_map[date_str]["total_duration"] = float(row.total_duration or 0)
+
+    return jsonify({
+        "success": True,
+        "days": days,
+        "daily_cardio": [
+            {"date": date, **summary_map[date]} for date in date_labels
+        ]
+    })
+
+
+
+def get_start_date(days):
+    try:
+        days = int(days)
+    except (ValueError, TypeError):
+        days = 7
+    return datetime.now().date() - timedelta(days=days)
+
+@summary_bp.route("/api/summary/strength", methods=["GET"])
+def strength_summary():
+    try:
+        days = int(request.args.get("days", 7))
+        if days < 1 or days > 90:
+            return jsonify({"success": False, "error": "Days must be between 1 and 90"}), 400
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid days parameter"}), 400
+
+    today = datetime.now().date()
+    start_date = today - timedelta(days=days - 1)
+
+    results = (
+        db.session.query(
+            WorkoutEntry.exercise,
+            func.count(StrengthEntry.id).label("total_sets")
+        )
+        .join(WorkoutSession, WorkoutSession.id == WorkoutEntry.session_id)
+        .join(StrengthEntry, StrengthEntry.entry_id == WorkoutEntry.id)
+        .filter(WorkoutSession.date >= start_date)
+        .group_by(WorkoutEntry.exercise)
+        .all()
+    )
+
+    summary = [
+        {"exercise": row.exercise, "total_sets": int(row.total_sets or 0)}
+        for row in results
+    ]
+
+    return jsonify({
+        "success": True,
+        "days": days,
+        "strength_summary": summary
+    })
+
+
+
+@summary_bp.route("/api/summary/prs")
+def pr_summary():
+    days = request.args.get("days", default=7, type=int)
+    start_date = datetime.now().date() - timedelta(days=days)
+
+    prs = (
+        db.session.query(
+            PersonalRecord.exercise,
+            PersonalRecord.type,
+            PersonalRecord.field,
+            PersonalRecord.value,
+            PersonalRecord.session_id,
+            WorkoutSession.date
+        )
+        .join(WorkoutSession, WorkoutSession.id == PersonalRecord.session_id)
+        .filter(WorkoutSession.date >= start_date)
+        .order_by(WorkoutSession.date.desc())
+        .all()
+    )
+
+    result = [
+        {
+            "exercise": pr.exercise,
+            "type": pr.type,
+            "field": pr.field,
+            "value": pr.value,
+            "session_id": pr.session_id,
+            "date": pr.date.format()
+        }
+        for pr in prs
+    ]
+
+    return jsonify({"prs": result})

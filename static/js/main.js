@@ -5,6 +5,7 @@ import { setupModalTriggers, closeModal } from './modal.js';
 import { setupWorkoutLogging } from './logWorkout.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+
     // Chart + Table Listeners
     document.getElementById("cardioSelect")?.addEventListener('change', function (event) {
         const exercise = event.target.value;

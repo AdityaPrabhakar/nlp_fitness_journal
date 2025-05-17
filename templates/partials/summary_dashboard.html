@@ -1,0 +1,31 @@
+<div class="max-w-7xl mx-auto px-4 py-6">
+  <!-- Summary Row -->
+  <div id="summary-row" class="grid grid-cols-3 gap-4 mb-4"></div>
+
+  <!-- Chart Row -->
+    <div class="grid grid-cols-3 gap-4">
+      <!-- Cardio Summary -->
+      <div class="bg-white shadow p-4 rounded h-[26rem] flex flex-col justify-between">
+        <div>
+          <h2 class="text-sm font-semibold mb-2">Daily Cardio Duration</h2>
+          <canvas id="cardioDurationChart" height="150"></canvas>
+        </div>
+        <div class="mt-6">
+          <h2 class="text-sm font-semibold mb-2">Daily Cardio Distance</h2>
+          <canvas id="cardioDistanceChart" height="150"></canvas>
+        </div>
+      </div>
+
+      <!-- Strength Chart Container -->
+      <div class="bg-white shadow p-4 rounded h-[26rem] overflow-y-auto">
+        <h2 class="text-sm font-semibold mb-2">Strength Sets Summary</h2>
+        <canvas id="strengthSummaryChart" class="w-full"></canvas>
+      </div>
+
+      <!-- PR List Container -->
+      <div class="bg-white shadow p-4 rounded h-[26rem] overflow-y-auto">
+        <h2 class="text-sm font-semibold mb-2">Weekly PRs</h2>
+        <ul id="prList" class="text-sm"></ul>
+      </div>
+    </div>
+</div>
