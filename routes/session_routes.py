@@ -56,8 +56,10 @@ def get_session_details(session_id):
         entry_list.append(entry_data)
 
     return jsonify({
+        'id': session.id,  # ✅ Include session ID here
         'date': session.date,
         'raw_text': session.raw_text,
         'notes': session.notes,
         'entries': entry_list
     })
+

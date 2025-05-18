@@ -1,4 +1,3 @@
-// static/js/sessionRenderer.js
 export function renderSessionDetails(data) {
   const entriesHtml = data.entries.map(entry => {
     let html = `<div class="mb-4 border-b pb-4">`;
@@ -25,10 +24,19 @@ export function renderSessionDetails(data) {
 
   return `
     <p class="mb-2"><strong>Date:</strong> ${data.date}</p>
+    <p class="mb-2 text-sm text-gray-500"><strong>Session ID:</strong> ${data.id}</p>
     ${data.notes ? `<p class="mb-2"><strong>Session Notes:</strong> ${data.notes}</p>` : ''}
-    <div class="mb-4 p-3 bg-gray-100 rounded-md">
+    <div class="mb-4 p-3 bg-gray-100 rounded-md relative">
       <p class="font-semibold mb-1">Journal Entry:</p>
       <pre class="whitespace-pre-wrap text-sm text-gray-800">${data.raw_text}</pre>
+      <button 
+        class="absolute top-2 right-2 text-sm text-blue-600 hover:underline"
+        data-edit-journal
+        data-session-id="${data.id}" 
+        data-raw-text='${JSON.stringify(data.raw_text)}'
+      >
+        Edit
+      </button>
     </div>
     <div class="mt-4">${entriesHtml || '<p>No entries found.</p>'}</div>
   `;

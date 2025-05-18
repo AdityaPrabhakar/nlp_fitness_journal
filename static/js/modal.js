@@ -1,12 +1,25 @@
 // modal.js
 
-export function openModal(contentOrId) {
+// modal.js
+
+export function openModal(contentOrId, options = {}) {
     const modal = document.getElementById('session-modal');
     const sessionDetails = document.getElementById('session-details');
 
     if (!modal || !sessionDetails) return;
 
-    // If it's just an ID, assume modal already has content
+    // Remove old size classes
+    const modalBox = modal.querySelector('.modal-box');
+    modalBox.classList.remove('w-96', 'w-[600px]', 'w-[800px]', 'max-h-[80vh]');
+
+    // Apply new size
+    if (options.size === 'xl') {
+        modalBox.classList.add('w-[800px]', 'max-h-[80vh]', 'overflow-y-auto');
+    } else {
+        modalBox.classList.add('w-96'); // default size
+    }
+
+    // Set content
     if (typeof contentOrId === 'string' && contentOrId.startsWith('#')) {
         const modalId = contentOrId.slice(1);
         document.getElementById(modalId)?.classList.remove('hidden');
@@ -15,7 +28,7 @@ export function openModal(contentOrId) {
         modal.classList.remove('hidden');
     }
 
-    document.body.classList.add('overflow-hidden'); // Optional: prevent background scroll
+    document.body.classList.add('overflow-hidden');
 }
 
 export function closeModal() {
