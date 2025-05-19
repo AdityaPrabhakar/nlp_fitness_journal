@@ -1,7 +1,4 @@
 // modal.js
-
-// modal.js
-
 export function openModal(contentOrId, options = {}) {
     const modal = document.getElementById('session-modal');
     const sessionDetails = document.getElementById('session-details');

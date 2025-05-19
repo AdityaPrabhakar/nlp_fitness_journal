@@ -39,5 +39,14 @@ export function renderSessionDetails(data) {
       </button>
     </div>
     <div class="mt-4">${entriesHtml || '<p>No entries found.</p>'}</div>
+    <div class="mt-6 text-right">
+      <button
+        class="inline-block text-blue-700 hover:underline text-sm font-medium"
+        data-view-trends
+        data-session-id="${data.id}"
+      >
+        View Session Insights
+      </button>
+    </div>
   `;
 }
