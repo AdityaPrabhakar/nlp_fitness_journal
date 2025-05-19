@@ -79,12 +79,6 @@ async function renderStrengthChart() {
   console.log("[DEBUG] Strength per-exercise summary:", summary);
 
   const canvas = document.getElementById('strengthSummaryChart');
-
-  // Increase per-bar height to avoid stacking
-  const barHeight = 50; // was 40, now more spacing
-  const chartHeight = summary.length * barHeight;
-  canvas.height = chartHeight;
-
   const ctx = canvas.getContext('2d');
 
   // Clean up previous chart instance
@@ -92,13 +86,20 @@ async function renderStrengthChart() {
     canvas._chartInstance.destroy();
   }
 
+  const labels = summary.map(d => d.exercise);
+  const values = summary.map(d => d.total_sets);
+
+  // Adjust chart height based on data length (fallback to a minimal height if empty)
+  const barHeight = 50;
+  canvas.height = Math.max(summary.length * barHeight, 150);
+
   const chart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: summary.map(d => d.exercise),
+      labels: labels,
       datasets: [{
         label: 'Total Sets',
-        data: summary.map(d => d.total_sets),
+        data: values,
         backgroundColor: 'rgba(54, 162, 235, 0.6)',
       }]
     },
@@ -119,7 +120,8 @@ async function renderStrengthChart() {
         y: {
           title: { display: true, text: 'Exercise' },
           ticks: {
-            autoSkip: false
+            autoSkip: false,
+            color: labels.length ? '#000' : '#aaa'
           }
         }
       }
@@ -128,6 +130,7 @@ async function renderStrengthChart() {
 
   canvas._chartInstance = chart;
 }
+
 
 
 async function renderPRList() {

@@ -34,11 +34,11 @@ def parse_workout(text):
     - "sets_details": a list of sets, each with:
         - "set_number": the set index (1-based)
         - "reps": number of reps (if not mentioned, omit or set to null)
-        - "weight": weight used (if mentioned; otherwise omit)
+        - "weight": numeric value only (omit units; e.g. 135 from "135 lbs" or "135kg")
 
     For cardio, include:
-    - "duration": in minutes (if provided)
-    - "distance": in miles or km (if provided)
+    - "duration": numeric value only (omit units; e.g. 30 from "30 minutes" or "half an hour")
+    - "distance": numeric value only (omit units; e.g. 2 from "2 miles" or "2 km")
 
     ### Example output:
 
@@ -62,6 +62,7 @@ def parse_workout(text):
     - Use the provided date context to convert relative dates into absolute ones.
     - Only include "date" if a specific or relative date is mentioned.
     - Do not guess a date if none is mentioned — just omit the "date" key.
+    - Strip or ignore all units of measure — store numeric values only.
     - Only include relevant keys. Do not include null, empty strings, or empty arrays.
     - Do NOT return explanations. Only return valid, parsable JSON.
 
@@ -80,6 +81,7 @@ def parse_workout(text):
 
     content = response.choices[0].message.content
     return json.loads(content)
+
 
 
 def clean_entry(entry):
