@@ -65,8 +65,10 @@ def log_workout():
         "success": True,
         "message": "Workout entry created successfully!",
         "session_id": session.id if session else None,
+        "session_date": session.date.format() if session else None,
         "new_prs": new_prs
     }), 201
+
 
 
 

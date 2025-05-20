@@ -29,7 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
           showPRToast(result.new_prs);
         }
 
-        const trendRes = await fetch(`/api/workout-trends/${result.session_id}`);
+        const sessionId = result.session_id;
+        const sessionDate = result.session_date; // Make sure your API returns this in YYYY-MM-DD format
+
+        const trendUrl = `/api/workout-trends/${sessionId}?date=${encodeURIComponent(sessionDate)}&count=5`;
+        const trendRes = await fetch(trendUrl);
         const trendData = await trendRes.json();
 
         let modalContent = `
@@ -53,5 +57,3 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
-
-

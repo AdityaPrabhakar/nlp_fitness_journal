@@ -160,7 +160,9 @@ document.addEventListener('click', async (e) => {
   const sessionId = btn.getAttribute('data-session-id');
 
   try {
-    const res = await fetch(`/api/workout-trends/${sessionId}`);
+    const session = lastSessionDetails.find(s => s.id === sessionId);
+    const sessionDate = session?.date || new Date().toISOString().slice(0, 10);
+    const res = await fetch(`/api/workout-trends/${sessionId}?date=${sessionDate}&count=5`);
     const data = await res.json();
 
     const modalContent = `

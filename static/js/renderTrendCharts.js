@@ -130,11 +130,15 @@ export async function renderTrendCharts(data) {
     const history = item.type === 'strength'
       ? [
           ...item.history.flatMap(h => h.sets.map(set => ({ date: h.date, reps: set.reps, weight: set.weight }))),
-          ...item.sets.map(set => ({ date: new Date().toISOString().split('T')[0], reps: set.reps, weight: set.weight }))
+          ...item.sets.map(set => ({
+            date: data.session_date,  // <-- use the actual date
+            reps: set.reps,
+            weight: set.weight
+          }))
         ]
       : [
           ...item.history.map(h => ({ date: h.date, distance: h.distance, pace: h.pace })),
-          { date: new Date().toISOString().split('T')[0], ...item.entry }
+          { date: data.session_date, ...item.entry }
         ];
 
     history.sort((a, b) => new Date(a.date) - new Date(b.date));
