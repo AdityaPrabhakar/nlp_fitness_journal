@@ -1,17 +1,23 @@
 from flask import Blueprint, jsonify, render_template
-from models import WorkoutSession, WorkoutEntry
-from models import StrengthEntry, CardioEntry  # Assuming this won't cause circular import
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
+from init import db
 
 session_bp = Blueprint('session', __name__)
+
 
 @session_bp.route("/view-entries")
 def view_entries():
     return render_template("partials/sessions.html")
 
-# Endpoint to fetch all workout sessions
+
+# Endpoint to fetch all workout sessions for the user
 @session_bp.route('/api/sessions', methods=['GET'])
+@jwt_required()
 def get_all_sessions():
-    sessions = WorkoutSession.query.all()
+    user_id = get_jwt_identity()
+    sessions = WorkoutSession.query.filter_by(user_id=user_id).all()
+
     result = []
     for session in sessions:
         result.append({
@@ -21,10 +27,13 @@ def get_all_sessions():
         })
     return jsonify(result)
 
+
 # Endpoint to fetch a specific session's details
 @session_bp.route('/api/session/<int:session_id>', methods=['GET'])
+@jwt_required()
 def get_session_details(session_id):
-    session = WorkoutSession.query.get(session_id)
+    user_id = get_jwt_identity()
+    session = WorkoutSession.query.filter_by(id=session_id, user_id=user_id).first()
     if not session:
         return jsonify({'error': 'Session not found'}), 404
 
@@ -56,10 +65,9 @@ def get_session_details(session_id):
         entry_list.append(entry_data)
 
     return jsonify({
-        'id': session.id,  # ✅ Include session ID here
+        'id': session.id,
         'date': session.date,
         'raw_text': session.raw_text,
         'notes': session.notes,
         'entries': entry_list
     })
-

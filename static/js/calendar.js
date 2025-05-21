@@ -2,6 +2,25 @@ import { openModal, setupModalTriggers } from './modal.js';
 import { renderSessionDetails } from './sessionRenderer.js';
 import { renderTrendCharts } from './renderTrendCharts.js';
 
+// Authenticated fetch helper
+function authFetch(url, options = {}) {
+  const token = localStorage.getItem('token');
+
+  const headers = {
+    ...(options.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  return fetch(url, { ...options, headers }).then(res => {
+    if (res.status === 401) {
+      alert('Your session has expired. Please log in again.');
+      window.location.href = '/login';
+      throw new Error('Unauthorized');
+    }
+    return res;
+  });
+}
+
 let lastViewedSessionIds = []; // Store sessionIds for re-rendering
 let lastSessionDetails = [];   // Store full session data for "Back" use
 
@@ -20,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     events: async function (fetchInfo, successCallback, failureCallback) {
       try {
-        const res = await fetch('/api/sessions');
+        const res = await authFetch('/api/sessions');
         const sessions = await res.json();
 
         const sessionsByDate = {};
@@ -50,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         lastSessionDetails = await Promise.all(
           sessionIds.map(id =>
-            fetch(`/api/session/${id}`).then(res => res.json())
+            authFetch(`/api/session/${id}`).then(res => res.json())
           )
         );
 
@@ -117,7 +136,7 @@ document.addEventListener('click', async (e) => {
     const newText = document.getElementById('edit-raw-text').value.trim();
 
     try {
-      const res = await fetch(`/api/edit-workout/${sessionId}`, {
+      const res = await authFetch(`/api/edit-workout/${sessionId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ raw_text: newText })
@@ -128,7 +147,7 @@ document.addEventListener('click', async (e) => {
       // Re-fetch updated session data
       lastSessionDetails = await Promise.all(
         lastViewedSessionIds.map(id =>
-          fetch(`/api/session/${id}`).then(res => res.json())
+          authFetch(`/api/session/${id}`).then(res => res.json())
         )
       );
 
@@ -162,7 +181,7 @@ document.addEventListener('click', async (e) => {
   try {
     const session = lastSessionDetails.find(s => s.id === sessionId);
     const sessionDate = session?.date || new Date().toISOString().slice(0, 10);
-    const res = await fetch(`/api/workout-trends/${sessionId}?date=${sessionDate}&count=5`);
+    const res = await authFetch(`/api/workout-trends/${sessionId}?date=${sessionDate}&count=5`);
     const data = await res.json();
 
     const modalContent = `
@@ -224,4 +243,3 @@ document.addEventListener('click', (e) => {
     openModal(content, { title: 'Workout Sessions', size: 'xl' });
   }
 });
-

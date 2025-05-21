@@ -3,12 +3,16 @@ from collections import defaultdict
 from init import db
 from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
 from datetime import datetime
+from auth_routes import get_jwt_identity, jwt_required  # <-- Make sure you import these
 
 trend_bp = Blueprint('trend', __name__)
 
 @trend_bp.route('/api/workout-trends/<int:session_id>', methods=['GET'])
+@jwt_required()
 def workout_trends(session_id):
-    session = WorkoutSession.query.get(session_id)
+    user_id = get_jwt_identity()
+
+    session = WorkoutSession.query.filter_by(id=session_id, user_id=user_id).first()
     if not session:
         return jsonify({'error': 'Workout session not found'}), 404
 
@@ -17,10 +21,7 @@ def workout_trends(session_id):
     count_param = request.args.get('count', type=int)  # default: None
 
     try:
-        if date_param:
-            filter_date = datetime.strptime(date_param, '%Y-%m-%d').date()
-        else:
-            filter_date = None
+        filter_date = datetime.strptime(date_param, '%Y-%m-%d').date() if date_param else None
     except ValueError:
         return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
 
@@ -51,6 +52,7 @@ def workout_trends(session_id):
                 .filter(
                     WorkoutEntry.exercise == entry.exercise,
                     WorkoutEntry.type == 'strength',
+                    WorkoutSession.user_id == user_id,
                     WorkoutSession.id != session_id
                 )
             )
@@ -58,10 +60,10 @@ def workout_trends(session_id):
             if filter_date:
                 historical_query = historical_query.filter(WorkoutSession.date < filter_date)
 
-            historical_query = historical_query.order_by(WorkoutSession.date.desc())
-
             if count_param:
-                historical_query = historical_query.limit(count_param)
+                historical_query = historical_query.order_by(WorkoutSession.date.desc()).limit(count_param)
+            else:
+                historical_query = historical_query.order_by(WorkoutSession.date.desc())
 
             historical_sets = historical_query.all()
 
@@ -106,6 +108,7 @@ def workout_trends(session_id):
                     .filter(
                         WorkoutEntry.exercise == entry.exercise,
                         WorkoutEntry.type == 'cardio',
+                        WorkoutSession.user_id == user_id,
                         WorkoutSession.id != session_id
                     )
                 )
@@ -113,10 +116,10 @@ def workout_trends(session_id):
                 if filter_date:
                     historical_query = historical_query.filter(WorkoutSession.date < filter_date)
 
-                historical_query = historical_query.order_by(WorkoutSession.date.desc())
-
                 if count_param:
-                    historical_query = historical_query.limit(count_param)
+                    historical_query = historical_query.order_by(WorkoutSession.date.desc()).limit(count_param)
+                else:
+                    historical_query = historical_query.order_by(WorkoutSession.date.desc())
 
                 historical_cardio = historical_query.all()
 
@@ -150,8 +153,7 @@ def workout_trends(session_id):
                 })
 
     return jsonify({
-        "session_date": session.date.format(),  # <-- add this line
+        "session_date": session.date.format(),
         "strength": strength_result,
         "cardio": cardio_result
     })
-
