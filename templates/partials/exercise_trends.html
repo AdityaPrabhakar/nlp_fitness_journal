@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8 px-4">
+  <h1 class="text-2xl font-bold text-center mb-6">📈 Exercise Trends</h1>
+
+  <div class="mb-4">
+      <div class="flex space-x-4 mb-2">
+        <button id="btnStrength" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Strength</button>
+        <button id="btnCardio" class="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400">Cardio</button>
+      </div>
+
+      <label for="exerciseSelect" class="block mb-2 font-medium">Select Exercise:</label>
+      <select id="exerciseSelect" class="w-full border rounded p-2">
+        <option disabled selected>Loading exercises...</option>
+      </select>
+    </div>
+
+
+  <canvas id="trendChart" height="100"></canvas>
+
+  <div id="aiInsight" class="mt-6 bg-blue-50 border border-blue-200 p-4 rounded shadow">
+    <h2 class="font-semibold mb-1">AI Insight</h2>
+    <p class="text-sm text-gray-700" id="trendInsight">Select an exercise to view insight.</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/exerciseTrends.js') }}"></script>
+{% endblock %}

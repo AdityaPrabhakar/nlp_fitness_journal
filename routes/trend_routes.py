@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, render_template
 from collections import defaultdict
 
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -8,6 +8,10 @@ from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
 from datetime import datetime
 
 trend_bp = Blueprint('trend', __name__)
+
+@trend_bp.route("/api/exercise-trends")
+def exercise_trends():
+    return render_template("partials/exercise_trends.html")
 
 @trend_bp.route('/api/workout-trends/<int:session_id>', methods=['GET'])
 @jwt_required()
@@ -159,3 +163,4 @@ def workout_trends(session_id):
         "strength": strength_result,
         "cardio": cardio_result
     })
+

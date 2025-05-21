@@ -12,37 +12,6 @@ log_entry_bp = Blueprint("log_entry", __name__)
 def index():
     return render_template("index.html")  # Just return the template
 
-@log_entry_bp.route("/api/dashboard-data", methods=["GET"])
-@jwt_required()
-def dashboard_data():
-    user_id = get_jwt_identity()
-
-    cardio_exercises = (
-        db.session.query(WorkoutEntry.exercise)
-        .filter_by(type='cardio', user_id=user_id)
-        .distinct()
-        .all()
-    )
-    strength_exercises = (
-        db.session.query(WorkoutEntry.exercise)
-        .filter_by(type='strength', user_id=user_id)
-        .distinct()
-        .all()
-    )
-    sessions = (
-        WorkoutSession.query
-        .filter_by(user_id=user_id)
-        .order_by(WorkoutSession.id.desc())
-        .all()
-    )
-
-    return jsonify({
-        "cardio_exercises": [e[0] for e in cardio_exercises],
-        "strength_exercises": [e[0] for e in strength_exercises],
-        "sessions": [s.to_dict() for s in sessions]  # ensure WorkoutSession has a `.to_dict()`
-    })
-
-
 @log_entry_bp.route("/log-entry")
 def show_log_form():
     return render_template("partials/form.html")
