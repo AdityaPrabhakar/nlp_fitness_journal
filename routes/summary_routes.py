@@ -107,6 +107,15 @@ def strength_summary():
     today = datetime.now().date()
     start_date = today - timedelta(days=days - 1)
 
+    print(f"User ID: {user_id}")
+    print(f"Start date: {start_date}")
+    print(
+        f"Workout sessions in range: {db.session.query(WorkoutSession).filter(WorkoutSession.user_id == user_id, WorkoutSession.date >= start_date).count()}")
+    print(
+        f"Workout entries: {db.session.query(WorkoutEntry).join(WorkoutSession).filter(WorkoutSession.user_id == user_id).count()}")
+    print(
+        f"Strength entries: {db.session.query(StrengthEntry).join(WorkoutEntry).join(WorkoutSession).filter(WorkoutSession.user_id == user_id, WorkoutSession.date >= start_date).count()}")
+
     results = (
         db.session.query(
             WorkoutEntry.exercise,
@@ -126,6 +135,8 @@ def strength_summary():
         {"exercise": row.exercise, "total_sets": int(row.total_sets or 0)}
         for row in results
     ]
+
+    print(summary)
 
     return jsonify({
         "success": True,
@@ -165,7 +176,7 @@ def pr_summary():
             "field": pr.field,
             "value": pr.value,
             "session_id": pr.session_id,
-            "date": pr.date.isoformat()
+            "date": pr.date.format()
         }
         for pr in prs
     ]

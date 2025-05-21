@@ -1,25 +1,7 @@
 import { openModal, setupModalTriggers } from './modal.js';
 import { renderSessionDetails } from './sessionRenderer.js';
 import { renderTrendCharts } from './renderTrendCharts.js';
-
-// Authenticated fetch helper
-function authFetch(url, options = {}) {
-  const token = localStorage.getItem('token');
-
-  const headers = {
-    ...(options.headers || {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-
-  return fetch(url, { ...options, headers }).then(res => {
-    if (res.status === 401) {
-      alert('Your session has expired. Please log in again.');
-      window.location.href = '/login';
-      throw new Error('Unauthorized');
-    }
-    return res;
-  });
-}
+import { authFetch} from "./authFetch.js";
 
 let lastViewedSessionIds = []; // Store sessionIds for re-rendering
 let lastSessionDetails = [];   // Store full session data for "Back" use

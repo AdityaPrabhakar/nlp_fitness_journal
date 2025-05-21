@@ -21,7 +21,7 @@
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
 
-      const res = await fetch('/auth/login', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ username, password })
@@ -31,7 +31,7 @@
       if (res.ok) {
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('username', data.username);
-        window.location.href = '/dashboard';  // or your homepage
+        window.location.href = '/';  // or your homepage
       } else {
         document.getElementById('error').innerText = data.error;
         document.getElementById('error').classList.remove('hidden');

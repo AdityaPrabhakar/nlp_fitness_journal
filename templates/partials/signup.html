@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sign Up</title>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+  <div class="p-6 bg-white rounded shadow w-96">
+    <h2 class="text-2xl font-bold mb-4">Sign Up</h2>
+    <form id="signupForm" class="space-y-4">
+      <input type="text" id="username" placeholder="Username" class="w-full p-2 border rounded" required />
+      <input type="password" id="password" placeholder="Password" class="w-full p-2 border rounded" required />
+      <button type="submit" class="w-full bg-green-500 text-white p-2 rounded">Sign Up</button>
+    </form>
+    <p id="error" class="text-red-500 mt-2 hidden"></p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('signupForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        console.log("[SIGNUP] Attempting signup with:", { username, password: "[HIDDEN]" });
+
+        try {
+          const res = await fetch('/api/auth/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+
+          const data = await res.json();
+          console.log("[SIGNUP] Response status:", res.status);
+          console.log("[SIGNUP] Response data:", data);
+
+          if (res.ok) {
+            console.log("[SIGNUP] Signup successful. Storing token and redirecting...");
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('username', data.username);
+            window.location.href = '/';
+          } else {
+            console.warn("[SIGNUP] Signup failed:", data.error);
+            document.getElementById('error').innerText = data.error;
+            document.getElementById('error').classList.remove('hidden');
+          }
+        } catch (err) {
+          console.error("[SIGNUP] Error during signup:", err);
+          document.getElementById('error').innerText = "An error occurred. Please try again.";
+          document.getElementById('error').classList.remove('hidden');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

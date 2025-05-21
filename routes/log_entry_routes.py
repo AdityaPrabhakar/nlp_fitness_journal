@@ -9,9 +9,14 @@ from init import db
 log_entry_bp = Blueprint("log_entry", __name__)
 
 @log_entry_bp.route("/", methods=["GET"])
-@jwt_required()
 def index():
+    return render_template("index.html")  # Just return the template
+
+@log_entry_bp.route("/api/dashboard-data", methods=["GET"])
+@jwt_required()
+def dashboard_data():
     user_id = get_jwt_identity()
+
     cardio_exercises = (
         db.session.query(WorkoutEntry.exercise)
         .filter_by(type='cardio', user_id=user_id)
@@ -30,14 +35,15 @@ def index():
         .order_by(WorkoutSession.id.desc())
         .all()
     )
-    return render_template("index.html",
-        sessions=sessions,
-        cardio_exercises=[e[0] for e in cardio_exercises],
-        strength_exercises=[e[0] for e in strength_exercises]
-    )
+
+    return jsonify({
+        "cardio_exercises": [e[0] for e in cardio_exercises],
+        "strength_exercises": [e[0] for e in strength_exercises],
+        "sessions": [s.to_dict() for s in sessions]  # ensure WorkoutSession has a `.to_dict()`
+    })
+
 
 @log_entry_bp.route("/log-entry")
-@jwt_required()
 def show_log_form():
     return render_template("partials/form.html")
 
@@ -70,8 +76,8 @@ def log_workout():
         db.session.commit()
 
         for item in cleaned_entries:
-            entry = WorkoutEntry.from_dict(item, session.id, user_id)
-            db.session.add(entry)
+            WorkoutEntry.from_dict(item, session.id)
+
         db.session.commit()
 
         new_prs = track_prs_for_session(session, cleaned_entries)
@@ -80,9 +86,10 @@ def log_workout():
         "success": True,
         "message": "Workout entry created successfully!",
         "session_id": session.id if session else None,
-        "session_date": session.date.isoformat() if session else None,
+        "session_date": session.date.format() if session else None,
         "new_prs": new_prs
     }), 201
+
 
 @log_entry_bp.route("/api/edit-workout/<int:session_id>", methods=["POST"])
 @jwt_required()
@@ -107,15 +114,17 @@ def edit_workout(session_id):
         return jsonify({"success": False, "error": str(e)}), 400
 
     try:
+        # Delete existing entries and their children
         entry_ids = [e.id for e in WorkoutEntry.query.filter_by(session_id=session.id, user_id=user_id).all()]
         StrengthEntry.query.filter(StrengthEntry.entry_id.in_(entry_ids)).delete(synchronize_session=False)
         CardioEntry.query.filter(CardioEntry.entry_id.in_(entry_ids)).delete(synchronize_session=False)
         WorkoutEntry.query.filter(WorkoutEntry.id.in_(entry_ids)).delete(synchronize_session=False)
 
+        # Add new entries
         for item in cleaned_entries:
-            entry = WorkoutEntry.from_dict(item, session.id, user_id)
-            db.session.add(entry)
+            WorkoutEntry.from_dict(item, session.id)
 
+        # Update session metadata
         session.raw_text = raw_text
         session.notes = notes
         if parsed_date:
@@ -136,6 +145,7 @@ def edit_workout(session_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 @log_entry_bp.route("/api/logs/strength/<exercise>")
 @jwt_required()

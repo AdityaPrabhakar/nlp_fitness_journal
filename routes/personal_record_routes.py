@@ -27,7 +27,7 @@ def get_personal_records():
                 "field": pr.field,
                 "value": pr.value,
                 "session_id": pr.session_id,
-                "date": session_date.isoformat()
+                "date": session_date.format()
             })
 
         return jsonify({

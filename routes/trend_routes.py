@@ -1,9 +1,11 @@
 from flask import Blueprint, jsonify, request
 from collections import defaultdict
+
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
 from init import db
 from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
 from datetime import datetime
-from auth_routes import get_jwt_identity, jwt_required  # <-- Make sure you import these
 
 trend_bp = Blueprint('trend', __name__)
 

@@ -31,8 +31,12 @@ def seed_test_data():
 
         print("Seeding test data...")
 
+        # Set a fixed user_id for all test sessions
+        TEST_USER_ID = 1
+
         for session_data in sample_sessions:
             session = WorkoutSession(
+                user_id=TEST_USER_ID,
                 date=session_data["date"],
                 raw_text=session_data["raw_text"],
                 notes=session_data.get("notes")
