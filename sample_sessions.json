@@ -1,163 +1,20 @@
 [
   {
     "user_id": 1,
-    "date": "2025-05-05",
-    "raw_text": "Ran 3.2 miles in 28 minutes. Then did 4 sets of 10 pushups and 3 sets of 8 barbell rows at 135 lbs.",
-    "notes": "Felt energized after the run. The back exercises felt solid.",
+    "date": "2025-05-12",
+    "raw_text": "Swam 1 mile in 40 minutes. Then did 3 sets of 10 dumbbell presses at 40 lbs.",
+    "notes": "Smooth swim. Felt strong during presses.",
     "entries": [
       {
         "type": "cardio",
-        "exercise": "running",
-        "notes": "Paced well, cool weather.",
-        "cardio_detail": { "duration": 28, "distance": 3.2 }
+        "exercise": "swimming",
+        "notes": "Maintained steady pace throughout.",
+        "cardio_detail": { "duration": 40, "distance": 1.0 }
       },
       {
         "type": "strength",
-        "exercise": "pushups",
-        "notes": "Good burn in the arms, no rest between sets.",
-        "strength_entries": [
-          { "set_number": 1, "reps": 10, "weight": null },
-          { "set_number": 2, "reps": 10, "weight": null },
-          { "set_number": 3, "reps": 10, "weight": null },
-          { "set_number": 4, "reps": 10, "weight": null }
-        ]
-      },
-      {
-        "type": "strength",
-        "exercise": "barbell row",
-        "notes": "Back felt solid, focus on form.",
-        "strength_entries": [
-          { "set_number": 1, "reps": 8, "weight": 135 },
-          { "set_number": 2, "reps": 8, "weight": 135 },
-          { "set_number": 3, "reps": 8, "weight": 135 }
-        ]
-      }
-    ]
-  },
-  {
-    "user_id": 1,
-    "date": "2025-05-06",
-    "raw_text": "Did 4 sets of 5 deadlifts at 225 lbs and 3 sets of 12 kettlebell swings at 35 lbs.",
-    "notes": "Grip strength improving. Felt strong during deadlifts.",
-    "entries": [
-      {
-        "type": "strength",
-        "exercise": "deadlift",
-        "notes": "Good control, no back pain. Focused on form.",
-        "strength_entries": [
-          { "set_number": 1, "reps": 5, "weight": 225 },
-          { "set_number": 2, "reps": 5, "weight": 225 },
-          { "set_number": 3, "reps": 5, "weight": 225 },
-          { "set_number": 4, "reps": 5, "weight": 225 }
-        ]
-      },
-      {
-        "type": "strength",
-        "exercise": "kettlebell swing",
-        "notes": "Form felt good, shoulders engaged.",
-        "strength_entries": [
-          { "set_number": 1, "reps": 12, "weight": 35 },
-          { "set_number": 2, "reps": 12, "weight": 35 },
-          { "set_number": 3, "reps": 12, "weight": 35 }
-        ]
-      }
-    ]
-  },
-  {
-    "user_id": 1,
-    "date": "2025-05-07",
-    "raw_text": "Cycled 14 miles in 52 minutes. Then did 3 sets of 10 situps.",
-    "notes": "Windy but good ride. The situps felt easy today.",
-    "entries": [
-      {
-        "type": "cardio",
-        "exercise": "cycling",
-        "notes": "Legs burned during the climb, but strong finish.",
-        "cardio_detail": { "duration": 52, "distance": 14.0 }
-      },
-      {
-        "type": "strength",
-        "exercise": "situps",
-        "notes": "Felt like a quick recovery exercise.",
-        "strength_entries": [
-          { "set_number": 1, "reps": 10, "weight": null },
-          { "set_number": 2, "reps": 10, "weight": null },
-          { "set_number": 3, "reps": 10, "weight": null }
-        ]
-      }
-    ]
-  },
-  {
-    "user_id": 1,
-    "date": "2025-05-08",
-    "raw_text": "Did 5 sets of 5 bench press at 155 lbs. No cardio today.",
-    "notes": "Felt strong, good form, tough last rep on the last set.",
-    "entries": [
-      {
-        "type": "strength",
-        "exercise": "bench press",
-        "notes": "Final rep on last set was tough, but pushed through.",
-        "strength_entries": [
-          { "set_number": 1, "reps": 5, "weight": 155 },
-          { "set_number": 2, "reps": 5, "weight": 155 },
-          { "set_number": 3, "reps": 5, "weight": 155 },
-          { "set_number": 4, "reps": 5, "weight": 155 },
-          { "set_number": 5, "reps": 5, "weight": 155 }
-        ]
-      }
-    ]
-  },
-  {
-    "user_id": 1,
-    "date": "2025-05-09",
-    "raw_text": "Jogged 2 miles in 20 minutes. Then did 3 sets of 15 air squats.",
-    "notes": "Easy recovery day. Felt good on the jog.",
-    "entries": [
-      {
-        "type": "cardio",
-        "exercise": "jogging",
-        "notes": "Felt light, no discomfort.",
-        "cardio_detail": { "duration": 20, "distance": 2.0 }
-      },
-      {
-        "type": "strength",
-        "exercise": "air squat",
-        "notes": "Nice and easy pace today.",
-        "strength_entries": [
-          { "set_number": 1, "reps": 15, "weight": null },
-          { "set_number": 2, "reps": 15, "weight": null },
-          { "set_number": 3, "reps": 15, "weight": null }
-        ]
-      }
-    ]
-  },
-  {
-    "user_id": 1,
-    "date": "2025-05-10",
-    "raw_text": "Ran 5 miles in 45 minutes. Then did 4 sets of 10 lunges and 3 sets of 10 barbell curls at 40 lbs.",
-    "notes": "Great run, pushed the pace. Felt strong on the curls.",
-    "entries": [
-      {
-        "type": "cardio",
-        "exercise": "running",
-        "notes": "Pushed the pace, a little tired by the end.",
-        "cardio_detail": { "duration": 45, "distance": 5.0 }
-      },
-      {
-        "type": "strength",
-        "exercise": "lunges",
-        "notes": "Good form, but legs were burning.",
-        "strength_entries": [
-          { "set_number": 1, "reps": 10, "weight": null },
-          { "set_number": 2, "reps": 10, "weight": null },
-          { "set_number": 3, "reps": 10, "weight": null },
-          { "set_number": 4, "reps": 10, "weight": null }
-        ]
-      },
-      {
-        "type": "strength",
-        "exercise": "barbell curl",
-        "notes": "Solid form, felt strong on curls.",
+        "exercise": "dumbbell press",
+        "notes": "Controlled reps, slight fatigue in shoulders.",
         "strength_entries": [
           { "set_number": 1, "reps": 10, "weight": 40 },
           { "set_number": 2, "reps": 10, "weight": 40 },
@@ -168,25 +25,129 @@
   },
   {
     "user_id": 1,
-    "date": "2025-05-11",
-    "raw_text": "Cycled 18 miles in 65 minutes. Followed by 3 sets of 12 pushups.",
-    "notes": "Felt great on the bike, pushups were a nice challenge.",
+    "date": "2025-05-13",
+    "raw_text": "Did 3 sets of 6 squats at 185 lbs and 4 sets of 10 hanging leg raises.",
+    "notes": "Legs felt powerful today. Core work was tough but satisfying.",
+    "entries": [
+      {
+        "type": "strength",
+        "exercise": "squat",
+        "notes": "Form solid, slight soreness in left knee.",
+        "strength_entries": [
+          { "set_number": 1, "reps": 6, "weight": 185 },
+          { "set_number": 2, "reps": 6, "weight": 185 },
+          { "set_number": 3, "reps": 6, "weight": 185 }
+        ]
+      },
+      {
+        "type": "strength",
+        "exercise": "hanging leg raise",
+        "notes": "Grip started to go on the last set.",
+        "strength_entries": [
+          { "set_number": 1, "reps": 10, "weight": null },
+          { "set_number": 2, "reps": 10, "weight": null },
+          { "set_number": 3, "reps": 10, "weight": null },
+          { "set_number": 4, "reps": 10, "weight": null }
+        ]
+      }
+    ]
+  },
+  {
+    "user_id": 1,
+    "date": "2025-05-14",
+    "raw_text": "Ran 4 miles in 36 minutes. Followed up with 2 sets of 20 situps and 2 sets of 15 pushups.",
+    "notes": "Beautiful day for a run. Core and arms felt activated afterward.",
     "entries": [
       {
         "type": "cardio",
-        "exercise": "cycling",
-        "notes": "Felt strong throughout, slight headwind on the return.",
-        "cardio_detail": { "duration": 65, "distance": 18.0 }
+        "exercise": "running",
+        "notes": "Good rhythm, picked up pace in last mile.",
+        "cardio_detail": { "duration": 36, "distance": 4.0 }
+      },
+      {
+        "type": "strength",
+        "exercise": "situps",
+        "notes": "Quick and effective cooldown.",
+        "strength_entries": [
+          { "set_number": 1, "reps": 20, "weight": null },
+          { "set_number": 2, "reps": 20, "weight": null }
+        ]
       },
       {
         "type": "strength",
         "exercise": "pushups",
-        "notes": "A little tough towards the end, but kept a steady pace.",
+        "notes": "Felt easy compared to usual push days.",
         "strength_entries": [
-          { "set_number": 1, "reps": 12, "weight": null },
-          { "set_number": 2, "reps": 12, "weight": null },
-          { "set_number": 3, "reps": 12, "weight": null }
+          { "set_number": 1, "reps": 15, "weight": null },
+          { "set_number": 2, "reps": 15, "weight": null }
         ]
+      }
+    ]
+  },
+  {
+    "user_id": 1,
+    "date": "2025-05-15",
+    "raw_text": "Rowed 3.5 miles in 30 minutes. Then 3 sets of 8 pullups.",
+    "notes": "Row felt great, upper body strong. Pullups tough by the last set.",
+    "entries": [
+      {
+        "type": "cardio",
+        "exercise": "rowing",
+        "notes": "Steady cadence, upper back worked hard.",
+        "cardio_detail": { "duration": 30, "distance": 3.5 }
+      },
+      {
+        "type": "strength",
+        "exercise": "pullups",
+        "notes": "Started strict, finished with some momentum.",
+        "strength_entries": [
+          { "set_number": 1, "reps": 8, "weight": null },
+          { "set_number": 2, "reps": 8, "weight": null },
+          { "set_number": 3, "reps": 8, "weight": null }
+        ]
+      }
+    ]
+  },
+  {
+    "user_id": 1,
+    "date": "2025-05-16",
+    "raw_text": "Did 4 sets of 6 overhead press at 95 lbs. Then 3 sets of 15 calf raises.",
+    "notes": "Shoulders handled weight well. Calves burning at the end.",
+    "entries": [
+      {
+        "type": "strength",
+        "exercise": "overhead press",
+        "notes": "Stable press, slowed the tempo for better control.",
+        "strength_entries": [
+          { "set_number": 1, "reps": 6, "weight": 95 },
+          { "set_number": 2, "reps": 6, "weight": 95 },
+          { "set_number": 3, "reps": 6, "weight": 95 },
+          { "set_number": 4, "reps": 6, "weight": 95 }
+        ]
+      },
+      {
+        "type": "strength",
+        "exercise": "calf raise",
+        "notes": "Added slow eccentric motion for better effect.",
+        "strength_entries": [
+          { "set_number": 1, "reps": 15, "weight": null },
+          { "set_number": 2, "reps": 15, "weight": null },
+          { "set_number": 3, "reps": 15, "weight": null }
+        ]
+      }
+    ]
+  },
+  {
+    "user_id": 1,
+    "date": "2025-05-17",
+    "raw_text": "Hiked 6 miles in 1 hour 45 minutes. No gym work today.",
+    "notes": "Challenging trail with elevation. Great cardio and scenery.",
+    "entries": [
+      {
+        "type": "cardio",
+        "exercise": "hiking",
+        "notes": "Some steep inclines, took steady breaks.",
+        "cardio_detail": { "duration": 105, "distance": 6.0 }
       }
     ]
   }

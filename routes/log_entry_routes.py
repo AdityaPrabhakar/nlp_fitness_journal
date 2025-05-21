@@ -1,7 +1,7 @@
 from flask import Blueprint, request, render_template, jsonify
 from datetime import datetime
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry, PersonalRecord
+from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry, PersonalRecord, User
 from utils import track_prs_for_session
 from utils.openai_utils import parse_workout, clean_entries
 from init import db
