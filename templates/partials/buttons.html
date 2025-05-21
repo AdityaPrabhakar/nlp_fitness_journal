@@ -17,3 +17,21 @@
     <span class="text-base leading-tight break-words text-center">View Journal Entries</span>
   </a>
 </div>
+
+<!-- Top-right Logout Button -->
+<div class="absolute top-4 right-4">
+  <button onclick="logout()"
+    class="px-4 py-2 bg-white border border-gray-300 text-red-600 font-medium rounded-md shadow hover:bg-gray-100 transition duration-200">
+    Logout
+  </button>
+</div>
+
+<script>
+function logout() {
+  localStorage.removeItem('access_token');
+  window.location.href = "/auth/login";
+}
+</script>
+
+
+

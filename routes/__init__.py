@@ -5,6 +5,7 @@ from .trend_routes import trend_bp
 from .exercise_routes import exercise_bp
 from .session_routes import session_bp
 from .summary_routes import summary_bp
+from .auth_routes import auth_bp
 
 def register_routes(app):
     app.register_blueprint(log_entry_bp)
@@ -12,5 +13,6 @@ def register_routes(app):
     app.register_blueprint(exercise_bp)
     app.register_blueprint(session_bp)
     app.register_blueprint(summary_bp)
+    app.register_blueprint(auth_bp)
 
 

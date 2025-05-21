@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fade-in {
+      animation: fade-in 0.5s ease-out;
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-green-100">
+  <div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-sm animate-fade-in">
+    <div class="mb-6 text-center">
+      <h2 class="text-3xl font-bold text-gray-800">Your AI Fitness Journal</h2>
+      <p class="text-gray-500 text-sm">Sign up to get started</p>
+    </div>
+
+    <form id="signupForm" class="space-y-4">
+      <input type="text" id="display_name" placeholder="Display Name"
+        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+        required />
+      <input type="email" id="email" placeholder="Email"
+        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+        required />
+      <input type="password" id="password" placeholder="Password"
+        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+        required />
+      <button type="submit"
+        class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-200">Sign Up</button>
+    </form>
+
+    <p id="error" class="text-red-500 text-sm mt-3 hidden text-center"></p>
+
+    <div class="mt-6 text-center text-sm">
+      <p class="text-gray-600">Already have an account?
+        <a href="/auth/login" class="text-green-600 font-medium hover:underline">Log in here</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('signupForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const display_name = document.getElementById('display_name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        try {
+          const res = await fetch('/api/auth/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, display_name })
+          });
+
+          const data = await res.json();
+          if (res.ok) {
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('display_name', data.display_name);
+            window.location.href = '/';
+          } else {
+            document.getElementById('error').innerText = data.error || "Signup failed.";
+            document.getElementById('error').classList.remove('hidden');
+          }
+        } catch (err) {
+          console.error("[SIGNUP] Error during signup:", err);
+          document.getElementById('error').innerText = "An error occurred. Please try again.";
+          document.getElementById('error').classList.remove('hidden');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

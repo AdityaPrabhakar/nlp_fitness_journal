@@ -1,15 +1,11 @@
-async function fetchJSON(url) {
-  const res = await fetch(url);
-  const data = await res.json();
-  if (!data.success) throw new Error('API error');
-  return data;
-}
+import { authFetch } from './authFetch.js';
 
 async function renderSummaryStats() {
   console.log("[INFO] Fetching summary stats...");
-  const data = await fetchJSON('/api/summary/overview?days=7');
-  const row = document.getElementById('summary-row');
+  const res = await authFetch('/api/summary/overview?days=7');
+  const data = await res.json();
 
+  const row = document.getElementById('summary-row');
   const items = [
     { label: "Total Sessions", count: data.total_sessions },
     { label: "Strength Workouts", count: data.strength_sessions },
@@ -26,9 +22,10 @@ async function renderSummaryStats() {
 
 async function renderCardioDurationChart() {
   console.log("[INFO] Fetching cardio duration...");
-  const data = await fetchJSON('/api/summary/cardio?days=7');
-  const ctx = document.getElementById('cardioDurationChart').getContext('2d');
+  const res = await authFetch('/api/summary/cardio?days=7');
+  const data = await res.json();
 
+  const ctx = document.getElementById('cardioDurationChart').getContext('2d');
   new Chart(ctx, {
     type: 'bar',
     data: {
@@ -49,9 +46,10 @@ async function renderCardioDurationChart() {
 
 async function renderCardioDistanceChart() {
   console.log("[INFO] Fetching cardio distance...");
-  const data = await fetchJSON('/api/summary/cardio?days=7');
-  const ctx = document.getElementById('cardioDistanceChart').getContext('2d');
+  const res = await authFetch('/api/summary/cardio?days=7');
+  const data = await res.json();
 
+  const ctx = document.getElementById('cardioDistanceChart').getContext('2d');
   new Chart(ctx, {
     type: 'bar',
     data: {
@@ -72,8 +70,8 @@ async function renderCardioDistanceChart() {
 
 async function renderStrengthChart() {
   console.log("[INFO] Fetching strength summary...");
-
-  const data = await fetchJSON('/api/summary/strength?days=7');
+  const res = await authFetch('/api/summary/strength?days=7');
+  const data = await res.json();
   const summary = data.strength_summary || [];
 
   console.log("[DEBUG] Strength per-exercise summary:", summary);
@@ -81,7 +79,6 @@ async function renderStrengthChart() {
   const canvas = document.getElementById('strengthSummaryChart');
   const ctx = canvas.getContext('2d');
 
-  // Clean up previous chart instance
   if (canvas._chartInstance) {
     canvas._chartInstance.destroy();
   }
@@ -89,14 +86,13 @@ async function renderStrengthChart() {
   const labels = summary.map(d => d.exercise);
   const values = summary.map(d => d.total_sets);
 
-  // Adjust chart height based on data length (fallback to a minimal height if empty)
   const barHeight = 50;
   canvas.height = Math.max(summary.length * barHeight, 150);
 
   const chart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: labels,
+      labels,
       datasets: [{
         label: 'Total Sets',
         data: values,
@@ -109,9 +105,7 @@ async function renderStrengthChart() {
       maintainAspectRatio: false,
       animation: false,
       layout: { padding: 0 },
-      plugins: {
-        legend: { display: false },
-      },
+      plugins: { legend: { display: false } },
       scales: {
         x: {
           beginAtZero: true,
@@ -131,18 +125,14 @@ async function renderStrengthChart() {
   canvas._chartInstance = chart;
 }
 
-
-
 async function renderPRList() {
   console.log("[INFO] Fetching PRs...");
 
   try {
-    const res = await fetch('/api/summary/prs?days=7');
-    if (!res.ok) throw new Error("Failed to fetch PRs");
+    const res = await authFetch('/api/summary/prs?days=7');
     const data = await res.json();
-
-    const list = document.getElementById('prList');
     const prs = data.prs || [];
+    const list = document.getElementById('prList');
 
     console.log("[DEBUG] PRs fetched:", prs);
 
@@ -165,7 +155,6 @@ async function renderPRList() {
   }
 }
 
-
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     await Promise.all([
@@ -179,4 +168,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Error loading dashboard:', err);
   }
 });
-

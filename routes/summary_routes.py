@@ -1,36 +1,38 @@
 from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func
-
 from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry, PersonalRecord
 from init import db
 
 summary_bp = Blueprint("summary", __name__)
 
 @summary_bp.route("/api/summary/overview", methods=["GET"])
+@jwt_required()
 def summary_overview():
+    user_id = get_jwt_identity()
     days = request.args.get("days", default=7, type=int)
     start_date = datetime.now().date() - timedelta(days=days)
 
-    # Total sessions in timeframe
     total_sessions = db.session.query(WorkoutSession).filter(
+        WorkoutSession.user_id == user_id,
         WorkoutSession.date >= start_date
     ).count()
 
-    # Get session IDs with strength entries
-    strength_session_ids = db.session.query(WorkoutEntry.session_id).filter(
-        WorkoutEntry.type == "strength"
-    ).distinct().all()
+    strength_session_ids = db.session.query(WorkoutEntry.session_id).filter_by(
+        type="strength"
+    ).join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id
+    ).filter(WorkoutSession.user_id == user_id).distinct().all()
     strength_session_ids = {sid for (sid,) in strength_session_ids}
 
-    # Get session IDs with cardio entries
-    cardio_session_ids = db.session.query(WorkoutEntry.session_id).filter(
-        WorkoutEntry.type == "cardio"
-    ).distinct().all()
+    cardio_session_ids = db.session.query(WorkoutEntry.session_id).filter_by(
+        type="cardio"
+    ).join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id
+    ).filter(WorkoutSession.user_id == user_id).distinct().all()
     cardio_session_ids = {sid for (sid,) in cardio_session_ids}
 
-    # Get sessions within the timeframe
     recent_session_ids = db.session.query(WorkoutSession.id).filter(
+        WorkoutSession.user_id == user_id,
         WorkoutSession.date >= start_date
     ).all()
     recent_session_ids = {sid for (sid,) in recent_session_ids}
@@ -45,9 +47,10 @@ def summary_overview():
         "cardio_sessions": cardio_sessions
     })
 
-
 @summary_bp.route("/api/summary/cardio", methods=["GET"])
+@jwt_required()
 def cardio_summary():
+    user_id = get_jwt_identity()
     try:
         days = int(request.args.get("days", 7))
         if days < 1 or days > 90:
@@ -57,8 +60,6 @@ def cardio_summary():
 
     today = datetime.now().date()
     start_date = today - timedelta(days=days - 1)
-
-    # Build empty map for each day
     date_labels = [(start_date + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(days)]
     summary_map = {date: {"total_distance": 0.0, "total_duration": 0.0} for date in date_labels}
 
@@ -70,7 +71,10 @@ def cardio_summary():
         )
         .join(WorkoutEntry, WorkoutEntry.session_id == WorkoutSession.id)
         .join(CardioEntry, CardioEntry.entry_id == WorkoutEntry.id)
-        .filter(WorkoutSession.date >= start_date)
+        .filter(
+            WorkoutSession.user_id == user_id,
+            WorkoutSession.date >= start_date
+        )
         .group_by(WorkoutSession.date)
         .all()
     )
@@ -89,17 +93,10 @@ def cardio_summary():
         ]
     })
 
-
-
-def get_start_date(days):
-    try:
-        days = int(days)
-    except (ValueError, TypeError):
-        days = 7
-    return datetime.now().date() - timedelta(days=days)
-
 @summary_bp.route("/api/summary/strength", methods=["GET"])
+@jwt_required()
 def strength_summary():
+    user_id = get_jwt_identity()
     try:
         days = int(request.args.get("days", 7))
         if days < 1 or days > 90:
@@ -110,6 +107,15 @@ def strength_summary():
     today = datetime.now().date()
     start_date = today - timedelta(days=days - 1)
 
+    print(f"User ID: {user_id}")
+    print(f"Start date: {start_date}")
+    print(
+        f"Workout sessions in range: {db.session.query(WorkoutSession).filter(WorkoutSession.user_id == user_id, WorkoutSession.date >= start_date).count()}")
+    print(
+        f"Workout entries: {db.session.query(WorkoutEntry).join(WorkoutSession).filter(WorkoutSession.user_id == user_id).count()}")
+    print(
+        f"Strength entries: {db.session.query(StrengthEntry).join(WorkoutEntry).join(WorkoutSession).filter(WorkoutSession.user_id == user_id, WorkoutSession.date >= start_date).count()}")
+
     results = (
         db.session.query(
             WorkoutEntry.exercise,
@@ -117,7 +123,10 @@ def strength_summary():
         )
         .join(WorkoutSession, WorkoutSession.id == WorkoutEntry.session_id)
         .join(StrengthEntry, StrengthEntry.entry_id == WorkoutEntry.id)
-        .filter(WorkoutSession.date >= start_date)
+        .filter(
+            WorkoutSession.user_id == user_id,
+            WorkoutSession.date >= start_date
+        )
         .group_by(WorkoutEntry.exercise)
         .all()
     )
@@ -127,16 +136,18 @@ def strength_summary():
         for row in results
     ]
 
+    print(summary)
+
     return jsonify({
         "success": True,
         "days": days,
         "strength_summary": summary
     })
 
-
-
 @summary_bp.route("/api/summary/prs")
+@jwt_required()
 def pr_summary():
+    user_id = get_jwt_identity()
     days = request.args.get("days", default=7, type=int)
     start_date = datetime.now().date() - timedelta(days=days)
 
@@ -150,7 +161,10 @@ def pr_summary():
             WorkoutSession.date
         )
         .join(WorkoutSession, WorkoutSession.id == PersonalRecord.session_id)
-        .filter(WorkoutSession.date >= start_date)
+        .filter(
+            WorkoutSession.user_id == user_id,
+            WorkoutSession.date >= start_date
+        )
         .order_by(WorkoutSession.date.desc())
         .all()
     )

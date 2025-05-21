@@ -1,6 +1,7 @@
 import { showPRToast } from './toast.js';
 import { openModal, setupModalTriggers } from './modal.js';
 import { renderTrendCharts } from './renderTrendCharts.js';
+import { authFetch } from './authFetch.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   setupModalTriggers();
@@ -14,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!entryText) return;
 
     try {
-      const response = await fetch('/api/log-workout', {
+      const response = await authFetch('/api/log-workout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ entry: entryText })
@@ -30,13 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const sessionId = result.session_id;
-        const sessionDate = result.session_date; // Make sure your API returns this in YYYY-MM-DD format
+        const sessionDate = result.session_date;
 
         const trendUrl = `/api/workout-trends/${sessionId}?date=${encodeURIComponent(sessionDate)}&count=5`;
-        const trendRes = await fetch(trendUrl);
+        const trendRes = await authFetch(trendUrl);
         const trendData = await trendRes.json();
 
-        let modalContent = `
+        const modalContent = `
           <div class="p-4 space-y-6">
             <h2 class="text-2xl font-bold text-center">Journal Entry Created! 🥳</h2>
             <p class="text-gray-600 text-lg text-center">Workout Summary</p>

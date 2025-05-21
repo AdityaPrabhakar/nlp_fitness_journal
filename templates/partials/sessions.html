@@ -1,32 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Workout Sessions Calendar</title>
+{% extends "base.html" %}
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% block title %}Workout Sessions Calendar{% endblock %}
 
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  {% include 'partials/go_back_home_button.html' %}
+  <h1 class="text-3xl font-bold mb-6 text-center">📅 Logged Workout Sessions</h1>
 
-  <!-- FullCalendar -->
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-</head>
-<body class="bg-gray-100 text-gray-800">
+  <!-- Calendar -->
+  <div id="calendar" class="bg-white rounded shadow p-4"></div>
+</div>
 
-  <div class="container mx-auto px-4 py-8">
-    {% include 'partials/go_back_home_button.html' %}
-    <h1 class="text-3xl font-bold mb-6 text-center">📅 Logged Workout Sessions</h1>
+<!-- Include session modal HTML -->
+{% include 'partials/modal.html' %}
+{% endblock %}
 
-    <!-- Calendar -->
-    <div id="calendar" class="bg-white rounded shadow p-4"></div>
-  </div>
-
-  <!-- Include session modal HTML -->
-  {% include 'partials/modal.html' %}
-
-  <!-- Load JS modules -->
-  <script type="module" src="/static/js/calendar.js"></script>
-</body>
-</html>
+{% block scripts %}
+<!-- FullCalendar -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script type="module" src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+{% endblock %}
