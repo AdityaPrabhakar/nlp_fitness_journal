@@ -1,17 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sign Up</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-  <div class="p-6 bg-white rounded shadow w-96">
-    <h2 class="text-2xl font-bold mb-4">Sign Up</h2>
+<body class="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-green-100">
+  <div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-sm animate-fade-in">
+    <div class="mb-6 text-center">
+      <h2 class="text-3xl font-bold text-gray-800">Your AI Fitness Journal</h2>
+      <p class="text-gray-500 text-sm">Sign up to get started</p>
+    </div>
+
     <form id="signupForm" class="space-y-4">
-      <input type="text" id="username" placeholder="Username" class="w-full p-2 border rounded" required />
-      <input type="password" id="password" placeholder="Password" class="w-full p-2 border rounded" required />
-      <button type="submit" class="w-full bg-green-500 text-white p-2 rounded">Sign Up</button>
+      <input type="text" id="username" placeholder="Username"
+        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400" required />
+      <input type="password" id="password" placeholder="Password"
+        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400" required />
+      <button type="submit"
+        class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-200">Sign Up</button>
     </form>
-    <p id="error" class="text-red-500 mt-2 hidden"></p>
+
+    <p id="error" class="text-red-500 text-sm mt-3 hidden text-center"></p>
+
+    <div class="mt-6 text-center text-sm">
+      <p class="text-gray-600">Already have an account?
+        <a href="/auth/login" class="text-green-600 font-medium hover:underline">Log in here</a>
+      </p>
+    </div>
   </div>
 
   <script>
@@ -22,8 +45,6 @@
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
 
-        console.log("[SIGNUP] Attempting signup with:", { username, password: "[HIDDEN]" });
-
         try {
           const res = await fetch('/api/auth/signup', {
             method: 'POST',
@@ -32,16 +53,11 @@
           });
 
           const data = await res.json();
-          console.log("[SIGNUP] Response status:", res.status);
-          console.log("[SIGNUP] Response data:", data);
-
           if (res.ok) {
-            console.log("[SIGNUP] Signup successful. Storing token and redirecting...");
             localStorage.setItem('access_token', data.access_token);
             localStorage.setItem('username', data.username);
             window.location.href = '/';
           } else {
-            console.warn("[SIGNUP] Signup failed:", data.error);
             document.getElementById('error').innerText = data.error;
             document.getElementById('error').classList.remove('hidden');
           }
@@ -53,5 +69,15 @@
       });
     });
   </script>
+
+  <style>
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fade-in 0.5s ease-out;
+    }
+  </style>
 </body>
 </html>
