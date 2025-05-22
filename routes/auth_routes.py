@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from models import User
 from init import db
 import re
@@ -67,3 +67,38 @@ def signup():
 @auth_bp.route('/logout')
 def logout():
     return redirect(url_for('auth.login_page'))
+
+@auth_bp.route('/api/auth/update-physique', methods=['POST'])
+@jwt_required()
+def update_physique():
+    data = request.get_json()
+    user_id = get_jwt_identity()
+
+    bodyweight = data.get('bodyweight')
+    height = data.get('height')
+
+    if bodyweight is None and height is None:
+        return jsonify({"error": "At least one of bodyweight or height must be provided."}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found."}), 404
+
+    if bodyweight is not None:
+        try:
+            user.bodyweight = float(bodyweight)
+        except ValueError:
+            return jsonify({"error": "Invalid bodyweight format."}), 400
+
+    if height is not None:
+        try:
+            user.height = float(height)
+        except ValueError:
+            return jsonify({"error": "Invalid height format."}), 400
+
+    db.session.commit()
+    return jsonify({
+        "message": "Physique updated.",
+        "bodyweight": user.bodyweight,
+        "height": user.height
+    }), 200

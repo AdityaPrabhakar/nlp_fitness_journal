@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sign Up</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
@@ -28,6 +28,7 @@
       <p class="text-gray-500 text-sm">Sign up to get started</p>
     </div>
 
+    <!-- Signup Form -->
     <form id="signupForm" class="space-y-4">
       <input type="text" id="display_name" placeholder="Display Name"
         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
@@ -38,8 +39,45 @@
       <input type="password" id="password" placeholder="Password"
         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
         required />
+      <input type="password" id="confirm_password" placeholder="Confirm Password"
+        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+        required />
       <button type="submit"
         class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-200">Sign Up</button>
+    </form>
+
+    <!-- Body Metrics Form -->
+    <form id="physiqueForm" class="space-y-4 hidden mt-6">
+      <div>
+        <label for="bodyweight" class="block text-sm font-medium text-gray-700 mb-1">Body Weight</label>
+        <div class="relative">
+          <input type="number" id="bodyweight" placeholder="e.g. 170"
+            class="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+            required />
+          <span class="absolute right-4 top-2.5 text-gray-500 text-sm">lbs</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Height</label>
+        <div class="flex gap-2">
+          <div class="relative w-1/2">
+            <input type="number" id="height_ft" placeholder="5"
+              class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+              required />
+            <span class="absolute right-3 top-2.5 text-gray-500 text-sm">ft</span>
+          </div>
+          <div class="relative w-1/2">
+            <input type="number" id="height_in" placeholder="10"
+              class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+              required />
+            <span class="absolute right-3 top-2.5 text-gray-500 text-sm">in</span>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit"
+        class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-200">Save & Continue</button>
     </form>
 
     <p id="error" class="text-red-500 text-sm mt-3 hidden text-center"></p>
@@ -53,12 +91,33 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      const signupForm = document.getElementById('signupForm');
+      const physiqueForm = document.getElementById('physiqueForm');
+      const errorText = document.getElementById('error');
+
+      const passwordInput = document.getElementById('password');
+      const confirmPasswordInput = document.getElementById('confirm_password');
+
+      // Live validation for password match
+      confirmPasswordInput.addEventListener('input', () => {
+        if (confirmPasswordInput.value === passwordInput.value) {
+          errorText.classList.add('hidden');
+        }
+      });
+
+      signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const display_name = document.getElementById('display_name').value.trim();
         const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+
+        if (password !== confirmPassword) {
+          errorText.innerText = "Passwords do not match.";
+          errorText.classList.remove('hidden');
+          return;
+        }
 
         try {
           const res = await fetch('/api/auth/signup', {
@@ -71,15 +130,48 @@
           if (res.ok) {
             localStorage.setItem('access_token', data.access_token);
             localStorage.setItem('display_name', data.display_name);
-            window.location.href = '/';
+            signupForm.classList.add('hidden');
+            physiqueForm.classList.remove('hidden');
           } else {
-            document.getElementById('error').innerText = data.error || "Signup failed.";
-            document.getElementById('error').classList.remove('hidden');
+            errorText.innerText = data.error || "Signup failed.";
+            errorText.classList.remove('hidden');
           }
         } catch (err) {
           console.error("[SIGNUP] Error during signup:", err);
-          document.getElementById('error').innerText = "An error occurred. Please try again.";
-          document.getElementById('error').classList.remove('hidden');
+          errorText.innerText = "An error occurred. Please try again.";
+          errorText.classList.remove('hidden');
+        }
+      });
+
+      physiqueForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = localStorage.getItem('access_token');
+        const bodyweight = parseFloat(document.getElementById('bodyweight').value);
+        const heightFt = parseInt(document.getElementById('height_ft').value);
+        const heightIn = parseInt(document.getElementById('height_in').value);
+        const height = heightFt * 12 + heightIn;
+
+        try {
+          const res = await fetch('/api/auth/update-physique', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ bodyweight, height })
+          });
+
+          if (res.ok) {
+            window.location.href = '/';
+          } else {
+            const data = await res.json();
+            errorText.innerText = data.error || "Failed to update physique.";
+            errorText.classList.remove('hidden');
+          }
+        } catch (err) {
+          console.error("[PHYSIQUE] Error:", err);
+          errorText.innerText = "An error occurred. Please try again.";
+          errorText.classList.remove('hidden');
         }
       });
     });

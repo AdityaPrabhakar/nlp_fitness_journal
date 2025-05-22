@@ -5,12 +5,14 @@ const trendInsight = document.getElementById("trendInsight");
 const btnStrength = document.getElementById("btnStrength");
 const btnCardio = document.getElementById("btnCardio");
 
-let chart;
+const rmChartCanvas = document.getElementById("rmChart");
+const volumeChartCanvas = document.getElementById("volumeChart");
+
 let currentType = "strength";
+let rmChart, volumeChart;
 
 // Load exercise list
 async function loadExercises(type) {
-  console.log(`[loadExercises] Fetching ${type} exercises...`);
   try {
     const res = await authFetch(`/api/exercises/${type}`);
     const exercises = await res.json();
@@ -35,91 +37,28 @@ async function loadExercises(type) {
   }
 }
 
-// Fetch raw entry data
-async function fetchExerciseData(exercise) {
-  const res = await authFetch(`/api/exercise-data/${encodeURIComponent(exercise)}`);
-  const data = await res.json();
-  return data;
-}
-
-// Compute adaptive "Effort Score"
-function computeEffortScore(entry) {
-  const reps = entry.reps ?? 1;
-  const sets = entry.sets ?? 1;
-  const weight = entry.weight;
-
-  if (weight != null && reps != null && sets != null) {
-    return weight * reps * sets;
-  }
-  if (weight != null && reps != null) {
-    return weight * reps;
-  }
-  if (reps != null && sets != null) {
-    return reps * sets;
-  }
-  if (reps != null) return reps;
-  if (weight != null) return weight;
-
-  return 0; // fallback
-}
-
-// Render chart
-function renderChart(data) {
-  const ctx = document.getElementById("trendChart").getContext("2d");
-  const labels = data.map(d => d.date);
-
-  const values = data.map(d =>
-    currentType === "strength"
-      ? computeEffortScore(d)
-      : d.distance ?? d.duration_minutes ?? 0
-  );
-
-  if (chart) chart.destroy();
-  chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: currentType === "strength" ? "Effort Score" : "Distance / Duration",
-        data: values,
-        fill: false,
-        borderColor: 'rgb(75, 192, 192)',
-        tension: 0.3
-      }]
-    },
-    options: {
-      scales: {
-        x: { title: { display: true, text: "Date" }},
-        y: { title: { display: true, text: currentType === "strength" ? "Effort Score" : "Distance" }}
-      }
-    }
-  });
-}
-
-// Generate adaptive trend insight
-function generateTrendLine(data) {
-  const values = data.map(d =>
-    currentType === "strength"
-      ? computeEffortScore(d)
-      : d.distance ?? d.duration_minutes ?? 0
-  );
-
-  if (values.length < 2) return "Insufficient data";
-
-  const slope = (values.at(-1) - values[0]) / values.length;
-  if (slope > 10) return "Strong growth";
-  else if (slope > 2) return "Moderate growth";
-  else if (slope > 0) return "Slight growth";
-  return "Trend appears flat or declining";
-}
-
 // Handle dropdown change
 select.addEventListener("change", async () => {
   const exercise = select.value;
-  const raw = await fetchExerciseData(exercise);
-  const trend = generateTrendLine(raw);
-  trendInsight.textContent = trend;
-  renderChart(raw);
+  trendInsight.textContent = "Loading trend data...";
+
+  try {
+    // 1RM Trend API
+    const rmRes = await authFetch(`/api/exercise-data/1rm-trend/${encodeURIComponent(exercise)}`);
+    const rmData = await rmRes.json();
+
+    // Volume Trend API
+    const volumeRes = await authFetch(`/api/exercise-data/volume-trend/${encodeURIComponent(exercise)}`);
+    const volumeData = await volumeRes.json();
+
+    renderRmChart(rmData);
+    renderVolumeChart(volumeData);
+
+    trendInsight.textContent = "";
+  } catch (err) {
+    console.error("[trend fetch] Failed:", err);
+    trendInsight.textContent = "Error loading trend data.";
+  }
 });
 
 // Toggle type buttons
@@ -139,5 +78,69 @@ btnCardio.addEventListener("click", () => {
   loadExercises("cardio");
 });
 
-// Load default on page load
+// Chart renderers
+function renderRmChart(data) {
+  if (rmChart) rmChart.destroy();
+  rmChart = new Chart(rmChartCanvas, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d.date),
+      datasets: [{
+        label: "Estimated 1RM",
+        data: data.map(d => d.estimated_1rm),
+        borderColor: "rgb(59, 130, 246)",
+        backgroundColor: "rgba(59, 130, 246, 0.2)",
+        tension: 0.2,
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          title: { display: true, text: '1RM (lbs)' },
+          beginAtZero: false
+        },
+        x: {
+          title: { display: true, text: 'Date' }
+        }
+      }
+    }
+  });
+}
+
+function renderVolumeChart(data) {
+  if (volumeChart) volumeChart.destroy();
+  volumeChart = new Chart(volumeChartCanvas, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d.date),
+      datasets: [{
+        label: "Total Volume",
+        data: data.map(d => d.volume),
+        borderColor: "rgb(16, 185, 129)",
+        backgroundColor: "rgba(16, 185, 129, 0.2)",
+        tension: 0.2,
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          title: { display: true, text: 'Volume (lbs)' },
+          beginAtZero: true
+        },
+        x: {
+          title: { display: true, text: 'Date' }
+        }
+      }
+    }
+  });
+}
+
+
+// Initial load
 loadExercises(currentType);

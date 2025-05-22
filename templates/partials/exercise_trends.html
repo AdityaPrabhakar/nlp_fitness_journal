@@ -22,17 +22,31 @@
     </select>
   </div>
 
-  <!-- Chart -->
-  <canvas id="trendChart" height="100"></canvas>
+  <!-- Charts Section -->
+  <div class="space-y-10">
 
-  <!-- AI Insight -->
-  <div id="aiInsight" class="mt-6 bg-blue-50 border border-blue-200 p-4 rounded shadow">
-    <h2 class="font-semibold mb-1">AI Insight</h2>
-    <p class="text-sm text-gray-700" id="trendInsight">Select an exercise to view insight.</p>
+    <!-- 1RM Chart -->
+    <div>
+      <h2 class="text-lg font-semibold mb-2 text-center">Estimated 1RM Over Time</h2>
+      <canvas id="rmChart" height="100"></canvas>
+    </div>
+
+    <!-- Volume Chart -->
+    <div>
+      <h2 class="text-lg font-semibold mb-2 text-center">Total Volume Over Time</h2>
+      <canvas id="volumeChart" height="100"></canvas>
+    </div>
+
   </div>
+
+  <!-- Insight Section -->
+  <div id="trendInsight" class="mt-10 text-sm text-gray-700 text-center"></div>
+
+
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script type="module" src="{{ url_for('static', filename='js/exerciseTrends.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module" src="{{ url_for('static', filename='js/exerciseTrends.js') }}"></script>
 {% endblock %}

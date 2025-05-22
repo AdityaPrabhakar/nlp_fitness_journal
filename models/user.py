@@ -7,6 +7,10 @@ class User(db.Model):
     display_name = db.Column(db.String(80))  # Public-facing name
     password_hash = db.Column(db.String(128), nullable=False)
 
+    # American units
+    bodyweight = db.Column(db.Float, nullable=True)  # In pounds (lbs)
+    height = db.Column(db.Float, nullable=True)      # In inches (in)
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 

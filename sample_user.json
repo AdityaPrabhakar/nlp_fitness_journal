@@ -1,0 +1,8 @@
+{
+  "id": 1,
+  "email": "sampleuser@example.com",
+  "display_name": "SampleUser",
+  "password_hash": "$pbkdf2:sha256:260000$KbGv3vB3A0Rm6LfV0B1B0u$e3a5c82394f5a799b3c6e2ab3c1abdc96b9b9c6c9927b1c2fddf67fca38f9a37",
+  "bodyweight": 180.0,
+  "height": 70.0
+}

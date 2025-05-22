@@ -1,9 +1,13 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import WorkoutEntry, WorkoutSession, StrengthEntry, CardioEntry
-from init import db
+from sqlalchemy.orm import joinedload
 
-exercise_bp = Blueprint("exercise", __name__)
+from init import db
+from models import WorkoutSession, WorkoutEntry, User
+from utils import estimate_1rm  # Make sure this is your 1RM calculator
+
+exercise_bp = Blueprint("exercise_bp", __name__)
+DEFAULT_REPS = 1
 
 @exercise_bp.route("/api/exercises/<exercise_type>")
 @jwt_required()
@@ -26,116 +30,83 @@ def get_exercises_by_type(exercise_type):
 
     return jsonify([e[0] for e in exercises])
 
-@exercise_bp.route("/api/exercise-data/<string:exercise_name>")
+@exercise_bp.route("/api/exercise-data/1rm-trend/<string:exercise>")
 @jwt_required()
-def get_exercise_data(exercise_name):
+def strength_1rm_trend(exercise):
     user_id = get_jwt_identity()
-    print(f"[INFO] Fetching exercise data for user {user_id}, exercise '{exercise_name}'")
+    formula = request.args.get("formula", "epley")
 
-    # Fetch strength entries
-    strength_results = (
-        db.session.query(StrengthEntry, WorkoutSession.date)
-        .join(WorkoutEntry, StrengthEntry.entry_id == WorkoutEntry.id)
-        .join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id)
-        .filter(
-            WorkoutEntry.exercise == exercise_name,
-            WorkoutSession.user_id == user_id
-        )
-        .all()
-    )
-    print(f"[INFO] Found {len(strength_results)} strength entries")
+    # Get the user's body weight
+    user = db.session.get(User, user_id)
+    if not user or not user.bodyweight:
+        return jsonify({"error": "User bodyweight not available"}), 400
 
-    # Fetch cardio entries
-    cardio_results = (
-        db.session.query(CardioEntry, WorkoutSession.date)
-        .join(WorkoutEntry, CardioEntry.entry_id == WorkoutEntry.id)
-        .join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id)
-        .filter(
-            WorkoutEntry.exercise == exercise_name,
-            WorkoutSession.user_id == user_id
-        )
-        .all()
-    )
-    print(f"[INFO] Found {len(cardio_results)} cardio entries")
+    bodyweight = user.bodyweight
 
-    def estimate_1rm(weight, reps):
-        if weight is None or reps is None or reps == 0:
-            return None
-        return weight * (1 + reps / 30)
+    sessions = WorkoutSession.query.options(
+        joinedload(WorkoutSession.entries).joinedload(WorkoutEntry.strength_entries)
+    ).filter_by(user_id=user_id).order_by(WorkoutSession.date).all()
 
-    def get_intensity_multiplier(intensity):
-        if intensity >= 0.9:
-            return 1.5
-        elif intensity >= 0.8:
-            return 1.2
-        elif intensity >= 0.7:
-            return 1.0
-        elif intensity >= 0.6:
-            return 0.7
-        else:
-            return 0.4
+    trend = []
+    for session in sessions:
+        max_1rm = None
+        for entry in session.entries:
+            if entry.type != "strength" or entry.exercise.lower() != exercise.lower():
+                continue
+            for s in entry.strength_entries:
+                reps = s.reps or DEFAULT_REPS
+                # Use user's body weight if no weight is set
+                weight = s.weight if s.weight and s.weight > 0 else bodyweight
 
-    one_rms = [
-        estimate_1rm(s.weight, s.reps)
-        for s, _ in strength_results
-        if s.weight is not None and s.reps is not None
-    ]
-    max_1rm = max(one_rms) if one_rms else None
-    print(f"[INFO] Max 1RM for '{exercise_name}': {max_1rm}")
+                est_1rm = estimate_1rm(reps, weight, formula)
+                if est_1rm is not None:
+                    max_1rm = max(max_1rm or 0, est_1rm)
+        if max_1rm:
+            trend.append({
+                "date": session.date,
+                "estimated_1rm": round(max_1rm, 2)
+            })
 
-    data = []
+    return jsonify(trend)
 
-    for s, date in strength_results:
-        sets = 1
-        reps = s.reps
-        weight = s.weight
 
-        if weight is not None and reps is not None and max_1rm:
-            intensity = weight / max_1rm
-            multiplier = get_intensity_multiplier(intensity)
-            effort = sets * reps * weight * multiplier
-            print(f"[STRENGTH] {date}: reps={reps}, weight={weight}, intensity={intensity:.2f}, multiplier={multiplier}, effort={effort:.2f}")
-        elif weight is None and reps is not None:
-            effort = sets * reps * 5  # fallback effort estimate
-            print(f"[STRENGTH] {date}: bodyweight fallback, reps={reps}, effort={effort}")
-        else:
-            effort = None
-            print(f"[WARNING] {date}: Skipped strength entry (reps={reps}, weight={weight})")
 
-        data.append({
-            "type": "strength",
-            "date": date,
-            "reps": reps,
-            "weight": weight,
-            "sets": sets,
-            "estimated_1rm": estimate_1rm(weight, reps) if reps and weight else None,
-            "effort": effort
-        })
+@exercise_bp.route("/api/exercise-data/volume-trend/<string:exercise>")
+@jwt_required()
+def strength_volume_trend(exercise):
+    user_id = get_jwt_identity()
 
-    for c, date in cardio_results:
-        if c.distance and c.duration:
-            speed = c.distance / (c.duration / 60)
-            effort = c.distance * speed**1.2
-            print(f"[CARDIO] {date}: dist={c.distance}, dur={c.duration}min, speed={speed:.2f}km/h, effort={effort:.2f}")
-        elif c.distance:
-            effort = c.distance * 10
-            print(f"[CARDIO] {date}: distance-only fallback, effort={effort}")
-        elif c.duration:
-            effort = c.duration * 5
-            print(f"[CARDIO] {date}: duration-only fallback, effort={effort}")
-        else:
-            effort = None
-            print(f"[WARNING] {date}: Skipped cardio entry (no distance or duration)")
+    # Get the user's body weight
+    user = db.session.get(User, user_id)
+    if not user or not user.bodyweight:
+        return jsonify({"error": "User bodyweight not available"}), 400
 
-        data.append({
-            "type": "cardio",
-            "date": date,
-            "duration_minutes": c.duration,
-            "distance": c.distance,
-            "effort": effort
-        })
+    bodyweight = user.bodyweight
 
-    data.sort(key=lambda x: x["date"])
-    print(f"[INFO] Returning {len(data)} total entries for '{exercise_name}'")
-    return jsonify(data)
+    sessions = WorkoutSession.query.options(
+        joinedload(WorkoutSession.entries).joinedload(WorkoutEntry.strength_entries)
+    ).filter_by(user_id=user_id).order_by(WorkoutSession.date).all()
+
+    trend = []
+    for session in sessions:
+        total_volume = 0
+        for entry in session.entries:
+            if entry.type != "strength" or entry.exercise.lower() != exercise.lower():
+                continue
+            for s in entry.strength_entries:
+                reps = s.reps or DEFAULT_REPS
+                # Use user's bodyweight if weight is not set
+                weight = s.weight if s.weight and s.weight > 0 else bodyweight
+                total_volume += reps * weight
+        if total_volume > 0:
+            trend.append({
+                "date": session.date,
+                "volume": round(total_volume, 2)
+            })
+
+    return jsonify(trend)
+
+
+
+
 
