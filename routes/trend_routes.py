@@ -22,9 +22,8 @@ def workout_trends(session_id):
     if not session:
         return jsonify({'error': 'Workout session not found'}), 404
 
-    # Get query parameters
-    date_param = request.args.get('date')  # e.g., '2025-05-01'
-    count_param = request.args.get('count', type=int)  # default: None
+    date_param = request.args.get('date')
+    count_param = request.args.get('count', type=int)
 
     try:
         filter_date = datetime.strptime(date_param, '%Y-%m-%d').date() if date_param else None
@@ -36,6 +35,7 @@ def workout_trends(session_id):
 
     for entry in session.entries:
         if entry.type == 'strength':
+            # Current session sets
             strength_sets = StrengthEntry.query.filter_by(entry_id=entry.id).order_by(StrengthEntry.set_number).all()
             sets_data = [
                 {
@@ -46,10 +46,12 @@ def workout_trends(session_id):
                 for s in strength_sets
             ]
 
+            # Historical strength sets including set_number
             historical_query = (
                 db.session.query(
                     WorkoutSession.date,
                     WorkoutEntry.notes,
+                    StrengthEntry.set_number,
                     StrengthEntry.reps,
                     StrengthEntry.weight
                 )
@@ -64,28 +66,32 @@ def workout_trends(session_id):
             )
 
             if filter_date:
-                historical_query = historical_query.filter(WorkoutSession.date < filter_date)
+                historical_query = historical_query.filter(
+                    (WorkoutSession.date < filter_date) |
+                    ((WorkoutSession.date == filter_date) & (WorkoutSession.id < session_id))
+                )
 
+            historical_query = historical_query.order_by(WorkoutSession.date.desc())
             if count_param:
-                historical_query = historical_query.order_by(WorkoutSession.date.desc()).limit(count_param)
-            else:
-                historical_query = historical_query.order_by(WorkoutSession.date.desc())
+                historical_query = historical_query.limit(count_param)
 
             historical_sets = historical_query.all()
 
             grouped_history = defaultdict(list)
-            for date, notes, reps, weight in historical_sets:
+            for date, notes, set_number, reps, weight in historical_sets:
                 key = (date.format(), notes or "")
                 grouped_history[key].append({
+                    "set_number": set_number,
                     "reps": reps,
                     "weight": weight
                 })
 
+            # Sort each set list by set_number
             history_data = [
                 {
                     "date": date,
                     "notes": notes,
-                    "sets": sets
+                    "sets": sorted(sets, key=lambda s: s["set_number"])
                 }
                 for (date, notes), sets in grouped_history.items()
             ]
@@ -120,12 +126,14 @@ def workout_trends(session_id):
                 )
 
                 if filter_date:
-                    historical_query = historical_query.filter(WorkoutSession.date < filter_date)
+                    historical_query = historical_query.filter(
+                        (WorkoutSession.date < filter_date) |
+                        ((WorkoutSession.date == filter_date) & (WorkoutSession.id < session_id))
+                    )
 
+                historical_query = historical_query.order_by(WorkoutSession.date.desc())
                 if count_param:
-                    historical_query = historical_query.order_by(WorkoutSession.date.desc()).limit(count_param)
-                else:
-                    historical_query = historical_query.order_by(WorkoutSession.date.desc())
+                    historical_query = historical_query.limit(count_param)
 
                 historical_cardio = historical_query.all()
 
@@ -163,4 +171,3 @@ def workout_trends(session_id):
         "strength": strength_result,
         "cardio": cardio_result
     })
-

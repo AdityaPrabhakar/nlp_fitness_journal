@@ -1,22 +1,26 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 id="welcome-heading" class="text-3xl font-bold text-center mt-6">Weekly Snapshot</h1>
-
-{% include "partials/summary_dashboard.html" %}
-{% include 'partials/buttons.html' %}
+<div id="protected-content" class="hidden">
+  <h1 id="welcome-heading" class="text-3xl font-bold text-center mt-6">Weekly Snapshot</h1>
+  {% include "partials/summary_dashboard.html" %}
+  {% include 'partials/buttons.html' %}
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script type="module" src="{{ url_for('static', filename='js/summaryDashboard.js') }}"></script>
+<script type="module">
+  import { enforceAuth } from "{{ url_for('static', filename='js/checkAuth.js') }}";
 
-<script>
+  enforceAuth("protected-content");
+
   document.addEventListener("DOMContentLoaded", () => {
     const displayName = localStorage.getItem('display_name');
     if (displayName) {
       const heading = document.getElementById('welcome-heading');
-      heading.textContent = `${displayName}'s Weekly Snapshot`;
+      if (heading) heading.textContent = `${displayName}'s Weekly Snapshot`;
     }
   });
 </script>
+<script type="module" src="{{ url_for('static', filename='js/summaryDashboard.js') }}"></script>
 {% endblock %}

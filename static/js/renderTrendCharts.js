@@ -11,12 +11,8 @@ export async function renderTrendCharts(data) {
     ...data.cardio.map((item, index) => ({ ...item, type: 'cardio', id: `cardio-${index}` }))
   ];
 
-  console.log(`[renderTrendCharts] Total items to render: ${allItems.length}`);
-
   allItems.forEach((item, i) => {
     const label = item.exercise || item.activity;
-    console.log(`[renderTrendCharts] Creating tab for: ${label} (id: ${item.id})`);
-
     const tab = document.createElement('button');
     tab.className = `px-4 py-2 rounded-t text-sm font-medium ${
       i === 0 ? 'bg-white border-t border-l border-r' : 'bg-gray-100'
@@ -38,16 +34,82 @@ export async function renderTrendCharts(data) {
     const panel = document.createElement('div');
     panel.id = item.id;
     panel.className = `trend-panel ${index !== 0 ? 'hidden' : ''}`;
-    console.log(`[renderTrendCharts] Creating panel for: ${item.id}`);
 
-    const canvasId = `${item.id}-chart`;
-    const chartWrapper = document.createElement('div');
-    chartWrapper.className = 'relative w-[90%] mx-auto h-72 mb-6';
-    chartWrapper.innerHTML = `<canvas id="${canvasId}" class="absolute inset-0 w-full h-full"></canvas>`;
-    panel.appendChild(chartWrapper);
+    // ========== CHART RENDERING FIRST ========== //
+    const chartTypes = item.type === 'strength' ? ['Weight', 'Reps'] : ['Distance', 'Pace'];
 
-    console.log(`[renderTrendCharts] Canvas element ID: ${canvasId}`);
+    chartTypes.forEach(chartType => {
+      const canvasId = `${item.id}-chart-${chartType.toLowerCase()}`;
+      const history = item.type === 'strength'
+        ? [
+            ...item.history.flatMap(h =>
+              h.sets.map(set => ({
+                date: `${h.date} (Set ${set.set_number ?? '-'})`,
+                reps: set.reps,
+                weight: set.weight
+              }))
+            ),
+            ...item.sets.map(set => ({
+              date: `${data.session_date} (Set ${set.set_number ?? '-'})`,
+              reps: set.reps,
+              weight: set.weight
+            }))
+          ]
+        : [
+            ...item.history.map(h => ({ date: h.date, distance: h.distance, pace: h.pace })),
+            { date: data.session_date, ...item.entry }
+          ];
 
+      history.sort((a, b) => new Date(a.date.split(' ')[0]) - new Date(b.date.split(' ')[0]));
+      const labels = history.map(h => h.date);
+      const dataPoints = history.map(h => h[chartType.toLowerCase()]);
+
+      const hasValidData = dataPoints.some(val => val !== null && val !== undefined);
+
+      if (!hasValidData) return; // 🚫 Skip chart rendering if all values are null/undefined
+
+      const chartWrapper = document.createElement('div');
+      chartWrapper.className = 'relative w-[90%] mx-auto h-72 mb-6';
+      chartWrapper.innerHTML = `<canvas id="${canvasId}" class="absolute inset-0 w-full h-full"></canvas>`;
+      panel.appendChild(chartWrapper); // ⬆️ Append chart BEFORE table
+
+      const ctx = chartWrapper.querySelector('canvas').getContext('2d');
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: chartType,
+            data: dataPoints,
+            borderColor: chartType === 'Weight' || chartType === 'Distance' ? 'rgb(75,192,192)' : 'rgb(153,102,255)',
+            backgroundColor: chartType === 'Weight' || chartType === 'Distance' ? 'rgba(75,192,192,0.2)' : 'rgba(153,102,255,0.2)',
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: chartType }
+            }
+          }
+        }
+      });
+    });
+
+    // ========== CURRENT SESSION NOTES ========== //
+    if (item.notes) {
+      const notesEl = document.createElement('p');
+      notesEl.className = 'text-sm italic text-gray-600 mb-2';
+      notesEl.textContent = `Notes: ${item.notes}`;
+      panel.appendChild(notesEl);
+    }
+
+    // ========== CURRENT SESSION TABLE ========== //
     const currentTable = document.createElement('table');
     currentTable.className = 'w-full text-sm border border-gray-300 mb-4';
     if (item.type === 'strength') {
@@ -120,78 +182,6 @@ export async function renderTrendCharts(data) {
     });
 
     container.appendChild(panel);
-
-    const canvasElement = document.getElementById(canvasId);
-    const computedStyle = window.getComputedStyle(canvasElement);
-    console.log(`[renderTrendCharts] Canvas computed style for ${canvasId}:`, computedStyle.display, computedStyle.width, computedStyle.height);
-
-    const ctx = canvasElement.getContext('2d');
-
-    const history = item.type === 'strength'
-      ? [
-          ...item.history.flatMap(h => h.sets.map(set => ({ date: h.date, reps: set.reps, weight: set.weight }))),
-          ...item.sets.map(set => ({
-            date: data.session_date,  // <-- use the actual date
-            reps: set.reps,
-            weight: set.weight
-          }))
-        ]
-      : [
-          ...item.history.map(h => ({ date: h.date, distance: h.distance, pace: h.pace })),
-          { date: data.session_date, ...item.entry }
-        ];
-
-    history.sort((a, b) => new Date(a.date) - new Date(b.date));
-    const labels = history.map(h => h.date);
-
-    const datasets = item.type === 'strength'
-      ? [
-          {
-            label: 'Weight',
-            data: history.map(h => h.weight),
-            borderColor: 'rgb(75,192,192)',
-            backgroundColor: 'rgba(75,192,192,0.2)',
-            yAxisID: 'y'
-          },
-          {
-            label: 'Reps',
-            data: history.map(h => h.reps),
-            borderColor: 'rgb(153,102,255)',
-            backgroundColor: 'rgba(153,102,255,0.2)',
-            yAxisID: 'y1'
-          }
-        ]
-      : [
-          {
-            label: 'Distance',
-            data: history.map(h => h.distance),
-            borderColor: 'rgb(255, 159, 64)',
-            backgroundColor: 'rgba(255,159,64,0.2)',
-            yAxisID: 'y'
-          },
-          {
-            label: 'Pace',
-            data: history.map(h => h.pace),
-            borderColor: 'rgb(54, 162, 235)',
-            backgroundColor: 'rgba(54,162,235,0.2)',
-            yAxisID: 'y1'
-          }
-        ];
-
-    console.log(`[renderTrendCharts] Rendering chart for ${canvasId}`, { labels, datasets });
-
-    new Chart(ctx, {
-      type: 'line',
-      data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        scales: {
-          y: { beginAtZero: true, position: 'left', title: { display: true, text: datasets[0].label } },
-          y1: { beginAtZero: true, position: 'right', title: { display: true, text: datasets[1].label }, grid: { drawOnChartArea: false } }
-        }
-      }
-    });
   });
 
   console.log('[renderTrendCharts] Chart rendering complete');
