@@ -1,11 +1,8 @@
 import json
 from openai import OpenAI
-
-client = OpenAI()
-
-
 from datetime import date
 
+client = OpenAI()
 
 # noinspection PyTypeChecker
 def parse_workout(text):
@@ -47,6 +44,15 @@ def parse_workout(text):
     - "duration": numeric value only (in minutes)
     - "distance": numeric value only (in miles)
 
+    ### Normalization:
+    - Normalize common exercise name typos and variations.
+      For example:
+        - "dumbell press" → "dumbbell press"
+        - "benchpress" → "bench press"
+        - "pushups" → "push-ups"
+        - "dead lift" → "deadlift"
+        - Ensure consistency across entries even with different spellings.
+
     ### Example output:
 
     {{
@@ -72,6 +78,7 @@ def parse_workout(text):
     }}
 
     ### Rules:
+    - Normalize common exercise name typos and variations (see above).
     - Use the provided date context to convert relative dates into absolute ones.
     - Only include "date" if a specific or relative date is mentioned.
     - Do not guess a date if none is mentioned — just omit the "date" key.
@@ -96,8 +103,6 @@ def parse_workout(text):
     return json.loads(content)
 
 
-
-
 def clean_entry(entry):
     """Fixes and enriches a single workout entry."""
     if 'reps' in entry and ('sets' not in entry or not entry['sets']):
@@ -113,4 +118,3 @@ def clean_entry(entry):
 def clean_entries(entries):
     """Cleans and normalizes a list of entries."""
     return [clean_entry(entry) for entry in entries]
-
