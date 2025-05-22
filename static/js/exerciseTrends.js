@@ -7,9 +7,13 @@ const btnCardio = document.getElementById("btnCardio");
 
 const rmChartCanvas = document.getElementById("rmChart");
 const volumeChartCanvas = document.getElementById("volumeChart");
+const intensityChartCanvas = document.getElementById("intensityChart");
+
+const startDateInput = document.getElementById("startDate");
+const endDateInput = document.getElementById("endDate");
 
 let currentType = "strength";
-let rmChart, volumeChart;
+let rmChart, volumeChart, intensityChart;
 
 // Load exercise list
 async function loadExercises(type) {
@@ -37,28 +41,57 @@ async function loadExercises(type) {
   }
 }
 
-// Handle dropdown change
 select.addEventListener("change", async () => {
   const exercise = select.value;
+  const startDate = startDateInput.value;
+  const endDate = endDateInput.value;
+
+  // Basic input validation
+  if (!exercise) {
+    trendInsight.textContent = "Please select an exercise.";
+    return;
+  }
+
+  if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+    trendInsight.textContent = "Start date must be before end date.";
+    return;
+  }
+
   trendInsight.textContent = "Loading trend data...";
 
+  const params = new URLSearchParams();
+  if (startDate) params.append("start_date", startDate);
+  if (endDate) params.append("end_date", endDate);
+
   try {
-    // 1RM Trend API
-    const rmRes = await authFetch(`/api/exercise-data/1rm-trend/${encodeURIComponent(exercise)}`);
+    const rmRes = await authFetch(`/api/exercise-data/1rm-trend/${encodeURIComponent(exercise)}?${params}`);
     const rmData = await rmRes.json();
 
-    // Volume Trend API
-    const volumeRes = await authFetch(`/api/exercise-data/volume-trend/${encodeURIComponent(exercise)}`);
+    const volumeRes = await authFetch(`/api/exercise-data/volume-trend/${encodeURIComponent(exercise)}?${params}`);
     const volumeData = await volumeRes.json();
+
+    const intensityRes = await authFetch(`/api/exercise-data/relative-intensity/${encodeURIComponent(exercise)}?${params}`);
+    const intensityData = await intensityRes.json();
 
     renderRmChart(rmData);
     renderVolumeChart(volumeData);
+    renderIntensityChart(intensityData);
 
     trendInsight.textContent = "";
   } catch (err) {
     console.error("[trend fetch] Failed:", err);
     trendInsight.textContent = "Error loading trend data.";
   }
+});
+
+
+// Refresh charts when date inputs change
+[startDateInput, endDateInput].forEach(input => {
+  input.addEventListener("change", () => {
+    if (select.value) {
+      select.dispatchEvent(new Event("change"));
+    }
+  });
 });
 
 // Toggle type buttons
@@ -141,6 +174,58 @@ function renderVolumeChart(data) {
   });
 }
 
+function renderIntensityChart(data) {
+  if (intensityChart) intensityChart.destroy();
+
+  // Format labels with newline between date and set #
+  const labels = data.map((d, i) => `${d.date}\nSet #${i + 1}`);
+  const intensities = data.map(d => d.relative_intensity);
+  const colors = data.map(d => {
+    if (d.zone === "Strength") return "rgba(239, 68, 68, 0.8)";
+    if (d.zone === "Hypertrophy") return "rgba(251, 191, 36, 0.8)";
+    return "rgba(59, 130, 246, 0.8)";
+  });
+
+  intensityChart = new Chart(intensityChartCanvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: "Relative Intensity (%1RM)",
+        data: intensities,
+        backgroundColor: colors,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const d = data[ctx.dataIndex];
+              return `${d.relative_intensity.toFixed(1)}% - ${d.zone}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 110,
+          title: { display: true, text: "% of 1RM" }
+        },
+        x: {
+          title: { display: true, text: "Set (Date & Order)" },
+          ticks: {
+            maxRotation: 0,   // Prevent diagonal labels
+            minRotation: 0,   // Keep horizontal
+            autoSkip: false   // Show all labels
+          }
+        }
+      }
+    }
+  });
+}
 
 // Initial load
 loadExercises(currentType);
