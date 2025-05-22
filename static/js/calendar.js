@@ -167,19 +167,20 @@ document.addEventListener('click', async (e) => {
     const data = await res.json();
 
     const modalContent = `
-      <div class="p-4 space-y-6">
-        <div class="flex justify-between items-center">
-          <h2 class="text-2xl font-bold text-center flex-1">Session Insights</h2>
-          <button 
-            class="text-blue-600 hover:underline text-sm"
-            id="back-to-sessions"
-          >← Back to Sessions</button>
-        </div>
-        <p class="text-gray-600 text-lg text-center">Workout Summary</p>
-        <div id="trend-tabs" class="mb-4 flex space-x-2 border-b"></div>
-        <div id="trend-container" class="mt-4"></div>
+    <div class="p-4 space-y-6">
+      <div class="relative flex items-center justify-center">
+        <button 
+          class="absolute left-0 text-blue-600 hover:underline text-sm"
+          id="back-to-sessions"
+        >← Back to Sessions</button>
+        <h2 class="text-2xl font-bold text-center">Session Insights</h2>
       </div>
-    `;
+      <p class="text-gray-600 text-lg text-center">Workout Summary</p>
+      <div id="trend-tabs" class="mb-4 flex space-x-2 border-b"></div>
+      <div id="trend-container" class="mt-4"></div>
+    </div>
+  `;
+
 
     openModal(modalContent, { title: 'Session Insights', size: 'xl' });
 

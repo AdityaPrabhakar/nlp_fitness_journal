@@ -13,10 +13,17 @@ def parse_workout(text):
 
     prompt = f"""
     You are a fitness assistant. A user will describe their workout in natural language.
-    Convert it into a strict JSON object with only the fields needed.
+    Convert it into a strict JSON object with only the fields needed, using **American units only**.
 
     ### Context:
     Today's date is {today}. Use this to resolve any relative dates like "yesterday", "last week", "on Monday", etc.
+
+    ### Units Standardization Rules:
+    - All distances must be in **miles**. Convert from kilometers (1 km = 0.621371 miles).
+    - All weights must be in **pounds (lbs)**. Convert from kilograms (1 kg = 2.20462 lbs).
+    - All durations should be in **minutes**. Handle terms like "half an hour" as 30.
+    - If no units are provided (e.g. "ran 2"), assume American units (e.g., miles for distance, lbs for weight).
+    - Strip all units in the final output and return numeric values only.
 
     ### Required JSON structure:
     Always return a dictionary with the following keys:
@@ -34,11 +41,11 @@ def parse_workout(text):
     - "sets_details": a list of sets, each with:
         - "set_number": the set index (1-based)
         - "reps": number of reps (if not mentioned, omit or set to null)
-        - "weight": numeric value only (omit units; e.g. 135 from "135 lbs" or "135kg")
+        - "weight": numeric value only (standardized to pounds)
 
     For cardio, include:
-    - "duration": numeric value only (omit units; e.g. 30 from "30 minutes" or "half an hour")
-    - "distance": numeric value only (omit units; e.g. 2 from "2 miles" or "2 km")
+    - "duration": numeric value only (in minutes)
+    - "distance": numeric value only (in miles)
 
     ### Example output:
 
@@ -53,16 +60,22 @@ def parse_workout(text):
             {{ "set_number": 2, "reps": 6, "weight": 155 }}
           ],
           "notes": "Felt strong"
+        }},
+        {{
+          "type": "cardio",
+          "exercise": "running",
+          "duration": 30,
+          "distance": 3.1
         }}
       ],
-      "notes": "Quick strength session."
+      "notes": "Solid training day."
     }}
 
     ### Rules:
     - Use the provided date context to convert relative dates into absolute ones.
     - Only include "date" if a specific or relative date is mentioned.
     - Do not guess a date if none is mentioned — just omit the "date" key.
-    - Strip or ignore all units of measure — store numeric values only.
+    - Always convert metric units to American units as instructed.
     - Only include relevant keys. Do not include null, empty strings, or empty arrays.
     - Do NOT return explanations. Only return valid, parsable JSON.
 
@@ -81,6 +94,7 @@ def parse_workout(text):
 
     content = response.choices[0].message.content
     return json.loads(content)
+
 
 
 

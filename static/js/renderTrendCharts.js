@@ -66,12 +66,12 @@ export async function renderTrendCharts(data) {
 
       const hasValidData = dataPoints.some(val => val !== null && val !== undefined);
 
-      if (!hasValidData) return; // 🚫 Skip chart rendering if all values are null/undefined
+      if (!hasValidData) return;
 
       const chartWrapper = document.createElement('div');
       chartWrapper.className = 'relative w-[90%] mx-auto h-72 mb-6';
       chartWrapper.innerHTML = `<canvas id="${canvasId}" class="absolute inset-0 w-full h-full"></canvas>`;
-      panel.appendChild(chartWrapper); // ⬆️ Append chart BEFORE table
+      panel.appendChild(chartWrapper);
 
       const ctx = chartWrapper.querySelector('canvas').getContext('2d');
 
@@ -91,10 +91,34 @@ export async function renderTrendCharts(data) {
         options: {
           responsive: true,
           maintainAspectRatio: true,
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.dataset.label || '';
+                  const val = context.raw;
+                  let suffix = '';
+                  if (label === 'Weight') suffix = ' lbs';
+                  else if (label === 'Distance') suffix = ' miles';
+                  else if (label === 'Pace') suffix = ' min/mile';
+                  else if (label === 'Duration') suffix = ' min';
+                  return `${label}: ${val}${suffix}`;
+                }
+              }
+            }
+          },
           scales: {
             y: {
               beginAtZero: true,
-              title: { display: true, text: chartType }
+              title: {
+                display: true,
+                text:
+                  chartType === 'Weight' ? 'Weight (lbs)' :
+                  chartType === 'Reps' ? 'Reps' :
+                  chartType === 'Distance' ? 'Distance (miles)' :
+                  chartType === 'Pace' ? 'Pace (min/mile)' :
+                  chartType
+              }
             }
           }
         }
@@ -114,7 +138,7 @@ export async function renderTrendCharts(data) {
     currentTable.className = 'w-full text-sm border border-gray-300 mb-4';
     if (item.type === 'strength') {
       currentTable.innerHTML = `
-        <thead class="bg-gray-100"><tr><th>Set</th><th>Reps</th><th>Weight</th></tr></thead>
+        <thead class="bg-gray-100"><tr><th>Set</th><th>Reps</th><th>Weight (lbs)</th></tr></thead>
         <tbody>
           ${item.sets.map(s => `
             <tr class="text-center">
@@ -126,7 +150,7 @@ export async function renderTrendCharts(data) {
         </tbody>`;
     } else {
       currentTable.innerHTML = `
-        <thead class="bg-gray-100"><tr><th>Distance</th><th>Duration</th><th>Pace</th></tr></thead>
+        <thead class="bg-gray-100"><tr><th>Distance (miles)</th><th>Duration (min)</th><th>Pace (min/mile)</th></tr></thead>
         <tbody>
           <tr class="text-center">
             <td>${item.entry.distance ?? '-'}</td>
@@ -155,7 +179,7 @@ export async function renderTrendCharts(data) {
       table.className = 'w-full text-xs border border-gray-200';
       if (item.type === 'strength') {
         table.innerHTML = `
-          <thead class="bg-gray-50"><tr><th>Set</th><th>Reps</th><th>Weight</th></tr></thead>
+          <thead class="bg-gray-50"><tr><th>Set</th><th>Reps</th><th>Weight (lbs)</th></tr></thead>
           <tbody>
             ${h.sets.map((s, idx) => `
               <tr class="text-center">
@@ -167,7 +191,7 @@ export async function renderTrendCharts(data) {
           </tbody>`;
       } else {
         table.innerHTML = `
-          <thead class="bg-gray-50"><tr><th>Distance</th><th>Duration</th><th>Pace</th></tr></thead>
+          <thead class="bg-gray-50"><tr><th>Distance (miles)</th><th>Duration (min)</th><th>Pace (min/mile)</th></tr></thead>
           <tbody>
             <tr class="text-center">
               <td>${h.distance ?? '-'}</td>
