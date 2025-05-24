@@ -3,6 +3,8 @@ import {renderRmChart} from "./charts/rmChart.js";
 import {renderVolumeChart} from "./charts/volumeChart.js";
 import {renderIntensityChart} from "./charts/intensityChart.js";
 import {renderSessionTable} from "./tables/sessionTable.js";
+import { renderDetailedSessionsChart } from "./charts/detailedSessionsChart.js";
+
 
 const select = document.getElementById("exerciseSelect");
 const trendInsight = document.getElementById("trendInsight");
@@ -77,6 +79,8 @@ select.addEventListener("change", async () => {
     renderIntensityChart(intensityData);
 
     await renderSessionTable(exercise, startDate, endDate);
+    await renderDetailedSessionsChart(exercise, startDate, endDate);
+
 
     trendInsight.textContent = "";
   } catch (err) {

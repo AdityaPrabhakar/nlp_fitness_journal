@@ -26,7 +26,16 @@ export function renderRmChart(data) {
           beginAtZero: false
         },
         x: {
-          title: { display: true, text: 'Date' }
+          title: { display: true, text: 'Date' },
+          ticks: {
+            autoSkip: true,
+            maxRotation: 60,
+            minRotation: 45,
+            callback: function(value, index, ticks) {
+              const label = this.getLabelForValue(value);
+              return label.length > 30 ? label.slice(0, 30) + "…" : label;
+            }
+          }
         }
       }
     }

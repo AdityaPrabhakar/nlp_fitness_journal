@@ -44,9 +44,13 @@ export function renderIntensityChart(data) {
         x: {
           title: { display: true, text: "Set (Date & Order)" },
           ticks: {
-            maxRotation: 0,
-            minRotation: 0,
-            autoSkip: false
+            autoSkip: true,
+            maxRotation: 60,
+            minRotation: 45,
+            callback: function(value, index, ticks) {
+              const label = this.getLabelForValue(value);
+              return label.length > 30 ? label.slice(0, 30) + "…" : label;
+            }
           }
         }
       }

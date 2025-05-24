@@ -34,7 +34,23 @@
       </div>
     </div>
 
-    <div id="sessionTableContainer" class="mt-6 overflow-x-auto"></div>
+    <!-- Session Table + Chart Grouped -->
+    <div class="mt-6 p-6 bg-white shadow-lg rounded-2xl border border-gray-200">
+      <h2 class="text-2xl font-bold mb-4 text-gray-800 text-center">📊 Session Details</h2>
+
+      <!-- Table -->
+      <div id="sessionTableContainer" class="overflow-x-auto mb-6"></div>
+
+      <!-- Chart -->
+      <div>
+        <h3 class="text-lg font-semibold text-gray-700 mb-2">📈 Session Chart</h3>
+        <div id="sessionChartContainer" class="w-full">
+          <canvas id="sessionChart" class="w-full h-64"></canvas>
+        </div>
+      </div>
+    </div>
+
+
 
 
   <!-- Charts Section -->
@@ -56,21 +72,18 @@
     </div>
 
     <!-- Intensity Insights Section -->
-    <div class="mt-16 border-t pt-10">
-      <h2 class="text-2xl font-bold mb-6 text-center">🔥 Intensity Insights</h2>
-
-      <div class="bg-white shadow rounded-lg p-6">
-        <p class="text-sm text-gray-600 mb-4 text-center">
-          This chart shows the relative intensity (% of 1RM) for each set performed, categorized by training zone.
-        </p>
-        <canvas id="intensityChart" height="120"></canvas>
-      </div>
+    <div class="mt-12 p-6 bg-white shadow-lg rounded-2xl border border-gray-200">
+      <h2 class="text-2xl font-bold mb-4 text-gray-800 text-center">🔥 Intensity Insights</h2>
+      <p class="text-sm text-gray-600 mb-4 text-center">
+        This chart shows the relative intensity (% of 1RM) for each set performed, categorized by training zone.
+      </p>
+      <canvas id="intensityChart" height="120"></canvas>
     </div>
+
 
 
   <!-- Insight Section -->
   <div id="trendInsight" class="mt-10 text-sm text-gray-700 text-center"></div>
-
 
 </div>
 {% endblock %}
