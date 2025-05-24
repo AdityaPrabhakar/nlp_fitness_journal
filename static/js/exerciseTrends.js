@@ -4,6 +4,8 @@ import {renderVolumeChart} from "./charts/volumeChart.js";
 import {renderIntensityChart} from "./charts/intensityChart.js";
 import {renderSessionTable} from "./tables/sessionTable.js";
 import { renderDetailedSessionsChart } from "./charts/detailedSessionsChart.js";
+import { renderPrChart } from "./charts/renderPrChart.js";
+
 
 
 const select = document.getElementById("exerciseSelect");
@@ -74,9 +76,27 @@ select.addEventListener("change", async () => {
     const intensityRes = await authFetch(`/api/exercise-data/relative-intensity/${encodeURIComponent(exercise)}?${params}`);
     const intensityData = await intensityRes.json();
 
+    // Fetch PR records
+    const prRes = await authFetch(`/api/personal-records/by-exercise/${encodeURIComponent(exercise)}?${params}`);
+    const prData = await prRes.json();
+
     renderRmChart(rmData);
     renderVolumeChart(volumeData);
     renderIntensityChart(intensityData);
+
+    if (prData.success) {
+      renderPrChart(prData.personal_records);
+
+      const latest = prData.personal_records.find(pr => pr.is_latest);
+      if (latest) {
+        document.getElementById("latestPrHighlight").textContent = `${latest.value} (${latest.field}) on ${new Date(latest.datetime).toLocaleDateString()}`;
+      } else {
+        document.getElementById("latestPrHighlight").textContent = "No records found.";
+      }
+    } else {
+      console.error("Failed to load PR data:", prData.error);
+      document.getElementById("latestPrHighlight").textContent = "Error loading PR data.";
+    }
 
     await renderSessionTable(exercise, startDate, endDate);
     await renderDetailedSessionsChart(exercise, startDate, endDate);

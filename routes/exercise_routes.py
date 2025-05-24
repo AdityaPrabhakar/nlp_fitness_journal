@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from init import db
 from models import WorkoutSession, WorkoutEntry, User, StrengthEntry
-from utils import estimate_1rm
+from utils import estimate_1rm, apply_date_filters
 
 exercise_bp = Blueprint("exercise_bp", __name__)
 DEFAULT_REPS = 1
@@ -207,24 +207,3 @@ def get_relative_intensity(exercise_name):
 
     return jsonify(results)
 
-
-
-def apply_date_filters(query):
-    start_date = request.args.get("start_date")
-    end_date = request.args.get("end_date")
-
-    if start_date:
-        try:
-            start_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
-            query = query.filter(WorkoutSession.date >= start_obj)
-        except ValueError:
-            return None, jsonify({"error": "Invalid start_date format"}), 400
-
-    if end_date:
-        try:
-            end_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
-            query = query.filter(WorkoutSession.date <= end_obj)
-        except ValueError:
-            return None, jsonify({"error": "Invalid end_date format"}), 400
-
-    return query, None, None
