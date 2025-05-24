@@ -1,4 +1,5 @@
 from init import db
+from datetime import datetime
 
 class PersonalRecord(db.Model):
     __tablename__ = "personal_records"
@@ -12,5 +13,6 @@ class PersonalRecord(db.Model):
     value = db.Column(db.Float, nullable=False)
 
     session_id = db.Column(db.Integer, db.ForeignKey("workout_session.id"), nullable=False)
+    datetime = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     user = db.relationship("User", backref="personal_records")

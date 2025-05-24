@@ -51,17 +51,10 @@ def track_prs_for_session(session, entries):
 
 def update_pr_record(user_id, exercise, type_, field, current_value, current_session_id):
     """
-    Recalculates and updates the top personal record for the given user, exercise, type, and field.
+    Recalculates the top personal record for the given user, exercise, type, and field.
+    Saves the new record to the database if it surpasses all previous records.
     Returns the new PR dict if the current session created it, otherwise None.
     """
-
-    # Delete existing PR for this user/exercise/type/field
-    db.session.query(PersonalRecord).filter_by(
-        user_id=user_id,
-        exercise=exercise,
-        type=type_,
-        field=field
-    ).delete()
 
     # Query the highest value for this field, scoped to the current user
     if type_ == "strength":
@@ -129,17 +122,24 @@ def update_pr_record(user_id, exercise, type_, field, current_value, current_ses
     if top_record:
         value, session_id = top_record
 
-        # Save the new PR
-        db.session.add(PersonalRecord(
-            user_id=user_id,
-            exercise=exercise,
-            type=type_,
-            field=field,
-            value=value,
-            session_id=session_id
-        ))
+        # Only save a new PR if this is the highest value so far
+        existing_max = (
+            db.session.query(PersonalRecord)
+            .filter_by(user_id=user_id, exercise=exercise, type=type_, field=field)
+            .order_by(PersonalRecord.value.desc())
+            .first()
+        )
 
-        # Only return the PR if it was caused by the current session
+        if not existing_max or value > existing_max.value:
+            db.session.add(PersonalRecord(
+                user_id=user_id,
+                exercise=exercise,
+                type=type_,
+                field=field,
+                value=value,
+                session_id=session_id
+            ))
+
         if session_id == current_session_id and current_value == value:
             return {
                 "exercise": exercise,

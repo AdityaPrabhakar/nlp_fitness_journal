@@ -41,7 +41,6 @@ def get_exercises_by_type(exercise_type):
     )
 
     return jsonify([e[0] for e in exercises])
-
 @exercise_bp.route("/api/exercise-data/1rm-trend/<string:exercise>")
 @jwt_required()
 def strength_1rm_trend(exercise):
@@ -52,24 +51,21 @@ def strength_1rm_trend(exercise):
     if not user or not user.bodyweight:
         return jsonify({"error": "User bodyweight not available"}), 400
 
+    query = db.session.query(WorkoutSession).filter(
+        WorkoutSession.user_id == user_id
+    ).options(
+        joinedload(WorkoutSession.entries)
+        .joinedload(WorkoutEntry.strength_entries)
+    )
+
+    query, err_resp, status = apply_date_filters(query)
+    if err_resp:
+        return err_resp, status
+
+    sessions = query.order_by(WorkoutSession.date).all()
     bodyweight = user.bodyweight
-    start_date, end_date = get_date_range()
-    if not start_date or not end_date:
-        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
-
-    # Make end date inclusive
-    start_dt = datetime.combine(start_date, datetime.min.time())
-    end_dt = datetime.combine(end_date + timedelta(days=1), datetime.min.time())
-
-    sessions = WorkoutSession.query.options(
-        joinedload(WorkoutSession.entries).joinedload(WorkoutEntry.strength_entries)
-    ).filter(
-        WorkoutSession.user_id == user_id,
-        WorkoutSession.date >= start_dt,
-        WorkoutSession.date < end_dt
-    ).order_by(WorkoutSession.date).all()
-
     trend = []
+
     for session in sessions:
         max_1rm = None
         for entry in session.entries:
@@ -90,7 +86,6 @@ def strength_1rm_trend(exercise):
 
     return jsonify(trend)
 
-
 @exercise_bp.route("/api/exercise-data/volume-trend/<string:exercise>")
 @jwt_required()
 def strength_volume_trend(exercise):
@@ -100,23 +95,21 @@ def strength_volume_trend(exercise):
     if not user or not user.bodyweight:
         return jsonify({"error": "User bodyweight not available"}), 400
 
+    query = db.session.query(WorkoutSession).filter(
+        WorkoutSession.user_id == user_id
+    ).options(
+        joinedload(WorkoutSession.entries)
+        .joinedload(WorkoutEntry.strength_entries)
+    )
+
+    query, err_resp, status = apply_date_filters(query)
+    if err_resp:
+        return err_resp, status
+
+    sessions = query.order_by(WorkoutSession.date).all()
     bodyweight = user.bodyweight
-    start_date, end_date = get_date_range()
-    if not start_date or not end_date:
-        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
-
-    start_dt = datetime.combine(start_date, datetime.min.time())
-    end_dt = datetime.combine(end_date + timedelta(days=1), datetime.min.time())  # inclusive
-
-    sessions = WorkoutSession.query.options(
-        joinedload(WorkoutSession.entries).joinedload(WorkoutEntry.strength_entries)
-    ).filter(
-        WorkoutSession.user_id == user_id,
-        WorkoutSession.date >= start_dt,
-        WorkoutSession.date < end_dt
-    ).order_by(WorkoutSession.date).all()
-
     trend = []
+
     for session in sessions:
         total_volume = 0
         for entry in session.entries:
@@ -128,7 +121,7 @@ def strength_volume_trend(exercise):
                 total_volume += reps * weight
         if total_volume > 0:
             trend.append({
-                "date": session.date,
+                "date": session.date.format(),
                 "volume": round(total_volume, 2)
             })
 
@@ -145,45 +138,56 @@ def get_relative_intensity(exercise_name):
         return jsonify({"error": "User bodyweight not available"}), 400
 
     body_weight = user.bodyweight
-    start_date, end_date = get_date_range()
-    if not start_date or not end_date:
-        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
 
-    start_dt = datetime.combine(start_date, datetime.min.time())
-    end_dt = datetime.combine(end_date + timedelta(days=1), datetime.min.time())  # inclusive
-
-    sets = (
-        db.session.query(StrengthEntry.reps, StrengthEntry.weight, WorkoutSession.date)
-        .join(WorkoutEntry, StrengthEntry.entry_id == WorkoutEntry.id)
-        .join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id)
-        .filter(
-            WorkoutEntry.type == "strength",
-            WorkoutEntry.exercise.ilike(exercise_name),
-            WorkoutSession.user_id == user_id,
-            WorkoutSession.date >= start_dt,
-            WorkoutSession.date < end_dt
-        )
-        .order_by(WorkoutSession.date)
-        .all()
+    # Base query
+    query = db.session.query(
+        StrengthEntry.reps,
+        StrengthEntry.weight,
+        StrengthEntry.set_number,
+        WorkoutSession.date
+    ).join(WorkoutEntry, StrengthEntry.entry_id == WorkoutEntry.id
+    ).join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id
+    ).filter(
+        WorkoutEntry.type == "strength",
+        WorkoutEntry.exercise.ilike(exercise_name),
+        WorkoutSession.user_id == user_id
     )
 
-    # Calculate global max 1RM for the exercise
-    max_1rm = 0
+    # Apply date filters
+    query, err_resp, status = apply_date_filters(query)
+    if err_resp:
+        return err_resp, status
+
+    sets = query.order_by(WorkoutSession.date, StrengthEntry.set_number).all()
+
     parsed_sets = []
-    for reps, weight, date in sets:
+    all_1rms = []
+
+    # Step 1: Parse all sets and calculate per-set 1RMs
+    for reps, weight, set_number, date in sets:
         reps = reps or DEFAULT_REPS
         weight = weight if weight and weight > 0 else body_weight
         est_1rm = estimate_1rm(reps, weight, formula=formula)
         if est_1rm:
-            max_1rm = max(max_1rm, est_1rm)
-            parsed_sets.append((reps, weight, date, est_1rm))
+            parsed_sets.append({
+                "set_number": set_number,
+                "reps": reps,
+                "weight": weight,
+                "date": date,
+                "estimated_1rm": est_1rm
+            })
+            all_1rms.append(est_1rm)
 
-    if max_1rm == 0:
+    if not all_1rms:
         return jsonify([])
 
+    # Step 2: Use the highest 1RM as the reference
+    reference_1rm = max(all_1rms)
+
+    # Step 3: Compute relative intensity and training zone
     results = []
-    for reps, weight, date, est_1rm in parsed_sets:
-        relative_intensity = (weight / max_1rm) * 100
+    for s in parsed_sets:
+        relative_intensity = (s["weight"] / reference_1rm) * 100
         if relative_intensity >= 85:
             zone = "Strength"
         elif 65 <= relative_intensity < 85:
@@ -192,12 +196,35 @@ def get_relative_intensity(exercise_name):
             zone = "Endurance"
 
         results.append({
-            "date": date.format(),
-            "weight": weight,
-            "reps": reps,
-            "estimated_1rm": round(est_1rm, 1),
+            "set_number": s["set_number"],
+            "date": s["date"].format(),
+            "weight": s["weight"],
+            "reps": s["reps"],
+            "estimated_1rm": round(s["estimated_1rm"], 1),
             "relative_intensity": round(relative_intensity, 1),
             "zone": zone
         })
 
     return jsonify(results)
+
+
+
+def apply_date_filters(query):
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+
+    if start_date:
+        try:
+            start_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
+            query = query.filter(WorkoutSession.date >= start_obj)
+        except ValueError:
+            return None, jsonify({"error": "Invalid start_date format"}), 400
+
+    if end_date:
+        try:
+            end_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
+            query = query.filter(WorkoutSession.date <= end_obj)
+        except ValueError:
+            return None, jsonify({"error": "Invalid end_date format"}), 400
+
+    return query, None, None

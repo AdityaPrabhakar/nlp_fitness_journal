@@ -25,12 +25,24 @@ export async function renderDetailedSessionsChart(exercise, startDate, endDate) 
     const weightData = [];
     const repsData = [];
 
+    const sessionCountPerDate = {};
+
     data.forEach(session => {
       const sessionDate = session.date;
+
+      let isNewSession = true;
+
       session.entries.forEach(entry => {
         if (entry.type === "strength") {
           entry.sets.forEach(set => {
-            labels.push(`${sessionDate} - Set #${set.set_number}`);
+            if (set.set_number === 1 && isNewSession) {
+              sessionCountPerDate[sessionDate] = (sessionCountPerDate[sessionDate] || 0) + 1;
+              isNewSession = false;
+            }
+
+            const sessionIndex = sessionCountPerDate[sessionDate] || 1;
+            const sessionLabel = sessionCountPerDate[sessionDate] > 1 ? ` (Session ${sessionIndex})` : '';
+            labels.push(`${sessionDate} - Set #${set.set_number}${sessionLabel}`);
             weightData.push(set.weight);
             repsData.push(set.reps);
           });

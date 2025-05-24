@@ -5,7 +5,23 @@ let intensityChart;
 export function renderIntensityChart(data) {
   if (intensityChart) intensityChart.destroy();
 
-  const labels = data.map((d, i) => `${d.date}\nSet #${i + 1}`);
+  // Map to track how many Set #1s we've seen per date
+  const sessionCountPerDate = {};
+  const labels = [];
+
+  data.forEach(d => {
+    const date = d.date;
+
+    if (d.set_number === 1) {
+      // New session on this date
+      sessionCountPerDate[date] = (sessionCountPerDate[date] || 0) + 1;
+    }
+
+    const sessionIndex = sessionCountPerDate[date] || 1;
+    const sessionLabel = sessionCountPerDate[date] > 1 ? ` (Session ${sessionIndex})` : '';
+    labels.push(`${date}\nSet #${d.set_number}${sessionLabel}`);
+  });
+
   const intensities = data.map(d => d.relative_intensity);
   const colors = data.map(d => {
     if (d.zone === "Strength") return "rgba(239, 68, 68, 0.8)";
@@ -30,7 +46,7 @@ export function renderIntensityChart(data) {
           callbacks: {
             label: function (ctx) {
               const d = data[ctx.dataIndex];
-              return `${d.relative_intensity.toFixed(1)}% - ${d.zone}`;
+              return `${d.relative_intensity.toFixed(1)}% - ${d.zone} (Set #${d.set_number}, ${d.reps} reps @ ${d.weight} lbs)`;
             }
           }
         }
