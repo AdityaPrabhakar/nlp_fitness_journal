@@ -1,4 +1,4 @@
-import {authFetch} from "../authFetch.js";
+import {authFetch} from "../auth/authFetch.js";
 
 const sessionTableContainer = document.getElementById("sessionTableContainer");
 

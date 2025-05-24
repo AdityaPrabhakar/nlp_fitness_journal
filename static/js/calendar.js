@@ -1,7 +1,7 @@
 import { openModal, setupModalTriggers } from './modal.js';
 import { renderSessionDetails } from './sessionRenderer.js';
 import { renderTrendCharts } from './renderTrendCharts.js';
-import { authFetch} from "./authFetch.js";
+import { authFetch} from "./auth/authFetch.js";
 
 let lastViewedSessionIds = []; // Store sessionIds for re-rendering
 let lastSessionDetails = [];   // Store full session data for "Back" use

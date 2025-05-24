@@ -1,7 +1,7 @@
 import { showPRToast } from './toast.js';
 import { openModal, setupModalTriggers } from './modal.js';
 import { renderTrendCharts } from './renderTrendCharts.js';
-import { authFetch } from './authFetch.js';
+import { authFetch } from './auth/authFetch.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   setupModalTriggers();

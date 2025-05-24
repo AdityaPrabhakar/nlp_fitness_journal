@@ -1,8 +1,8 @@
-import { authFetch } from './authFetch.js';
+import { authFetch } from './auth/authFetch.js';
 import {renderRmChart} from "./charts/rmChart.js";
 import {renderVolumeChart} from "./charts/volumeChart.js";
 import {renderIntensityChart} from "./charts/intensityChart.js";
-import {renderSessionTable} from "./charts/sessionTable.js";
+import {renderSessionTable} from "./tables/sessionTable.js";
 
 const select = document.getElementById("exerciseSelect");
 const trendInsight = document.getElementById("trendInsight");
