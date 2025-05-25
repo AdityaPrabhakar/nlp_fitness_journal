@@ -1,7 +1,6 @@
 from init import db
 from models import PersonalRecord, WorkoutEntry, StrengthEntry, CardioEntry, WorkoutSession
 
-
 def track_prs_for_session(session, entries):
     """
     Tracks new personal records for the given workout session and list of entries.
@@ -21,13 +20,13 @@ def track_prs_for_session(session, entries):
 
             if weights:
                 max_weight = max(weights)
-                new_pr = update_pr_record(user_id, exercise, "strength", "weight", max_weight, session.id)
+                new_pr = update_pr_record(user_id, exercise, "strength", "weight", max_weight, session.id, "lbs")
                 if new_pr:
                     new_prs.append(new_pr)
 
             if not weights and reps:
                 max_reps = max(reps)
-                new_pr = update_pr_record(user_id, exercise, "strength", "reps", max_reps, session.id)
+                new_pr = update_pr_record(user_id, exercise, "strength", "reps", max_reps, session.id, "reps")
                 if new_pr:
                     new_prs.append(new_pr)
 
@@ -36,12 +35,18 @@ def track_prs_for_session(session, entries):
             duration = entry.get("duration")
 
             if distance:
-                new_pr = update_pr_record(user_id, exercise, "cardio", "distance", distance, session.id)
+                new_pr = update_pr_record(user_id, exercise, "cardio", "distance", distance, session.id, "mi")
                 if new_pr:
                     new_prs.append(new_pr)
 
             if duration:
-                new_pr = update_pr_record(user_id, exercise, "cardio", "duration", duration, session.id)
+                new_pr = update_pr_record(user_id, exercise, "cardio", "duration", duration, session.id, "min")
+                if new_pr:
+                    new_prs.append(new_pr)
+
+            if distance and duration and duration > 0:
+                pace = distance / duration
+                new_pr = update_pr_record(user_id, exercise, "cardio", "pace", pace, session.id, "mi/min")
                 if new_pr:
                     new_prs.append(new_pr)
 
@@ -49,14 +54,13 @@ def track_prs_for_session(session, entries):
     return new_prs
 
 
-def update_pr_record(user_id, exercise, type_, field, current_value, current_session_id):
+def update_pr_record(user_id, exercise, type_, field, current_value, current_session_id, units):
     """
     Recalculates the top personal record for the given user, exercise, type, and field.
     Saves the new record to the database if it surpasses all previous records.
     Returns the new PR dict if the current session created it, otherwise None.
     """
 
-    # Query the highest value for this field, scoped to the current user
     if type_ == "strength":
         if field == "weight":
             query = (
@@ -111,6 +115,20 @@ def update_pr_record(user_id, exercise, type_, field, current_value, current_ses
                 )
                 .order_by(CardioEntry.duration.desc())
             )
+        elif field == "pace":
+            query = (
+                db.session.query((CardioEntry.distance / CardioEntry.duration).label("pace"), WorkoutEntry.session_id)
+                .join(WorkoutEntry, CardioEntry.entry_id == WorkoutEntry.id)
+                .join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id)
+                .filter(
+                    WorkoutEntry.exercise == exercise,
+                    CardioEntry.distance != None,
+                    CardioEntry.duration != None,
+                    CardioEntry.duration > 0,
+                    WorkoutSession.user_id == user_id
+                )
+                .order_by((CardioEntry.distance / CardioEntry.duration).desc())
+            )
         else:
             return None
 
@@ -122,7 +140,6 @@ def update_pr_record(user_id, exercise, type_, field, current_value, current_ses
     if top_record:
         value, session_id = top_record
 
-        # Only save a new PR if this is the highest value so far
         existing_max = (
             db.session.query(PersonalRecord)
             .filter_by(user_id=user_id, exercise=exercise, type=type_, field=field)
@@ -137,6 +154,7 @@ def update_pr_record(user_id, exercise, type_, field, current_value, current_ses
                 type=type_,
                 field=field,
                 value=value,
+                units=units,
                 session_id=session_id
             ))
 
@@ -146,6 +164,7 @@ def update_pr_record(user_id, exercise, type_, field, current_value, current_ses
                 "type": type_,
                 "field": field,
                 "value": value,
+                "units": units,
                 "session_id": session_id
             }
 

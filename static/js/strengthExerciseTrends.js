@@ -4,7 +4,7 @@ import { renderVolumeChart } from "./charts/volumeChart.js";
 import { renderIntensityChart } from "./charts/intensityChart.js";
 import { renderSessionTable } from "./tables/sessionTable.js";
 import { renderDetailedSessionsChart } from "./charts/detailedSessionsChart.js";
-import { renderPrChart } from "./charts/renderPrChart.js";
+import { renderStrengthPrChart } from "./charts/renderStrengthPrChart.js";
 import { renderAiInsights, showLoadingAiInsights } from "./charts/aiInsights.js";
 
 const select = document.getElementById("exerciseSelect");
@@ -67,14 +67,15 @@ select.addEventListener("change", async () => {
     renderIntensityChart(intensityData);
 
     if (prData.success) {
-      renderPrChart(prData.personal_records);
+      renderStrengthPrChart(prData.personal_records);
 
       const latest = prData.personal_records.find(pr => pr.is_latest);
       if (latest) {
-        document.getElementById("latestPrHighlight").textContent = `${latest.value} (${latest.field}) on ${new Date(latest.datetime).toLocaleDateString()}`;
+        document.getElementById("latestPrHighlight").textContent = `${latest.value} ${latest.units} on ${new Date(latest.datetime).toLocaleDateString()}`;
       } else {
         document.getElementById("latestPrHighlight").textContent = "No records found.";
       }
+
     } else {
       console.error("Failed to load PR data:", prData.error);
       document.getElementById("latestPrHighlight").textContent = "Error loading PR data.";

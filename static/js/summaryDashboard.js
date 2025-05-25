@@ -141,19 +141,39 @@ async function renderPRList() {
       return;
     }
 
-    list.innerHTML = prs.map(pr => `
-      <li>
-        <span class="font-medium capitalize">${pr.exercise}</span> -
-        <span class="text-blue-600 font-semibold">${pr.value}</span>
-        <span class="text-gray-500 text-xs">(${pr.field}, ${pr.date})</span>
-      </li>
-    `).join('');
+    list.innerHTML = prs.map(pr => {
+      let displayValue;
+
+      if (pr.field === 'pace' && pr.units === 'min/mi') {
+        const paceValue = pr.value > 0 ? (1 / pr.value) : 0;
+        const minutes = Math.floor(paceValue);
+        const seconds = Math.round((paceValue - minutes) * 60);
+        const secondsStr = seconds < 10 ? `0${seconds}` : `${seconds}`;
+        displayValue = `${minutes}:${secondsStr} ${pr.units}`;
+      } else {
+        const formatted = typeof pr.value === 'number'
+          ? (pr.units === 'mi' ? pr.value.toFixed(2)
+              : pr.units === 'min' || pr.units === 'lbs' ? pr.value.toFixed(1)
+              : pr.value)
+          : pr.value;
+        displayValue = `${formatted} ${pr.units}`;
+      }
+
+      return `
+        <li>
+          <span class="font-medium capitalize">${pr.exercise}</span> -
+          <span class="text-blue-600 font-semibold">${displayValue}</span>
+          <span class="text-gray-500 text-xs">(${pr.field}, ${pr.date})</span>
+        </li>
+      `;
+    }).join('');
   } catch (err) {
     console.error("[ERROR] Failed to render PRs:", err);
     const list = document.getElementById('prList');
     list.innerHTML = `<li class="text-red-500 text-sm">Error loading PRs.</li>`;
   }
 }
+
 
 document.addEventListener('DOMContentLoaded', async () => {
   try {

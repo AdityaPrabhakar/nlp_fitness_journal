@@ -1,7 +1,9 @@
 from datetime import datetime
+from collections import defaultdict
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
+
 from models import PersonalRecord
 from init import db
 
@@ -27,8 +29,9 @@ def get_personal_records():
                 "type": pr.type,
                 "field": pr.field,
                 "value": pr.value,
+                "units": pr.units,
                 "session_id": pr.session_id,
-                "datetime": pr.datetime.format()
+                "datetime": pr.datetime.isoformat()
             })
 
         return jsonify({
@@ -43,9 +46,6 @@ def get_personal_records():
             "error": str(e)
         }), 500
 
-from flask import request
-from datetime import datetime
-from collections import defaultdict
 
 @personal_record_bp.route("/api/personal-records/by-exercise/<string:exercise>", methods=["GET"])
 @jwt_required()
@@ -79,7 +79,6 @@ def get_personal_records_by_exercise(exercise):
 
         records = query.order_by(PersonalRecord.field.asc()).all()
 
-        # Organize by field to identify top PRs
         pr_by_field = defaultdict(list)
         for pr in records:
             pr_by_field[pr.field].append(pr)
@@ -93,6 +92,7 @@ def get_personal_records_by_exercise(exercise):
                     "type": pr.type,
                     "field": pr.field,
                     "value": pr.value,
+                    "units": pr.units,
                     "session_id": pr.session_id,
                     "datetime": pr.datetime.isoformat(),
                     "is_latest": pr.id == highest_pr.id
