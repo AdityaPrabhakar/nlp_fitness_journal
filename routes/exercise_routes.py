@@ -301,8 +301,10 @@ def suggest_next_cardio_session(exercise_name):
     # Prepare data for AI
     session_data = []
     for dur, dist, date, session_id in sessions:
-        # Safeguard against zero distance
-        pace = round(dur / dist, 2) if dist and dist > 0 else None
+        if dur and dist and dist > 0:
+            pace = round(dur / dist, 2)
+        else:
+            pace = None
         session_data.append({
             "session_id": session_id,
             "duration": dur,

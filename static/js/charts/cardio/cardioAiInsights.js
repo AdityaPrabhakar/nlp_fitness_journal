@@ -1,5 +1,10 @@
 export function showLoadingCardioAiInsights() {
   const container = document.getElementById("aiInsightsCardio");
+
+  // Immediately clear any old content
+  container.innerHTML = "";
+
+  // Show loading state
   container.innerHTML = `
     <div class="flex items-center space-x-2 text-sm text-gray-600">
       <svg class="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -10,6 +15,7 @@ export function showLoadingCardioAiInsights() {
     </div>
   `;
 }
+
 
 
 export function renderCardioAiInsights(data) {
