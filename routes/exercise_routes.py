@@ -4,9 +4,9 @@ from sqlalchemy.orm import joinedload
 from datetime import datetime, timedelta
 
 from init import db
-from models import WorkoutSession, WorkoutEntry, User, StrengthEntry
+from models import WorkoutSession, WorkoutEntry, User, StrengthEntry, CardioEntry
 from utils import estimate_1rm, apply_date_filters
-from utils.openai_utils import recommend_followup_set
+from utils.openai_utils import recommend_followup_set, recommend_followup_cardio
 
 exercise_bp = Blueprint("exercise_bp", __name__)
 DEFAULT_REPS = 1
@@ -262,3 +262,53 @@ def suggest_next_set(exercise_name):
     )
 
     return jsonify(recommendation)
+
+@exercise_bp.route("/api/exercise-data/cardio/ai-insights/<string:exercise_name>")
+@jwt_required()
+def suggest_next_cardio_session(exercise_name):
+    import json
+    from collections import defaultdict
+    user_id = get_jwt_identity()
+    goal = request.args.get("goal", "improve endurance slightly")
+
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 400
+
+    query = db.session.query(
+        CardioEntry.duration,
+        CardioEntry.distance,
+        WorkoutSession.date,
+        WorkoutSession.id.label("session_id")
+    ).join(WorkoutEntry, CardioEntry.entry_id == WorkoutEntry.id
+    ).join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id
+    ).filter(
+        WorkoutEntry.type == "cardio",
+        WorkoutEntry.exercise.ilike(exercise_name),
+        WorkoutSession.user_id == user_id
+    )
+
+    # Apply optional date range
+    query, err_resp, status = apply_date_filters(query)
+    if err_resp:
+        return err_resp, status
+
+    sessions = query.order_by(WorkoutSession.date).all()
+
+    if not sessions:
+        return jsonify({"error": "No cardio data found for this exercise"}), 404
+
+    # Prepare data for AI
+    session_data = []
+    for dur, dist, date, session_id in sessions:
+        # Safeguard against zero distance
+        pace = round(dur / dist, 2) if dist and dist > 0 else None
+        session_data.append({
+            "session_id": session_id,
+            "duration": dur,
+            "distance": dist,
+            "pace": pace,
+            "date": date.format()
+        })
+
+    return jsonify(recommend_followup_cardio(exercise_name, session_data, goal=goal))

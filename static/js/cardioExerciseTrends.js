@@ -1,8 +1,8 @@
 import { authFetch } from './auth/authFetch.js';
 import { renderSessionTable } from "./tables/sessionTable.js";
-import { renderCardioDetailedSessionsChart } from "./charts/cardio/cardioDetailedSessionsChart.js"; // <-- updated import
+import { renderCardioDetailedSessionsChart } from "./charts/cardio/cardioDetailedSessionsChart.js";
 import { renderCardioPrCharts } from "./charts/cardio/renderCardioPrCharts.js";
-
+import { renderCardioAiInsights, showLoadingCardioAiInsights } from "./charts/cardio/cardioAiInsights.js"; // <-- NEW IMPORTS
 
 const select = document.getElementById("exerciseSelect");
 const startDateInput = document.getElementById("startDate");
@@ -66,7 +66,7 @@ select.addEventListener("change", async () => {
           let valueDisplay;
           if (pr.field === 'pace' && pr.units === 'min/mi') {
             const minutes = Math.floor(pr.value);
-            const seconds = Math.floor((pr.value - minutes) * 60);  // just scale to 60
+            const seconds = Math.floor((pr.value - minutes) * 60);
             const secondsStr = seconds.toString().padStart(2, '0');
             valueDisplay = `${minutes}:${secondsStr} ${pr.units}`;
           } else {
@@ -85,12 +85,18 @@ select.addEventListener("change", async () => {
         highlightContainer.innerHTML = `<div class="text-gray-500 italic">No records found.</div>`;
       }
 
-      // ✅ Render cardio PR charts
       renderCardioPrCharts(prData.personal_records);
     }
 
     await renderSessionTable(exercise, startDate, endDate);
-    await renderCardioDetailedSessionsChart(exercise, startDate, endDate); // <-- updated here
+    await renderCardioDetailedSessionsChart(exercise, startDate, endDate);
+
+    // ✅ AI insights for cardio
+    showLoadingCardioAiInsights();
+    const aiRes = await authFetch(`/api/exercise-data/cardio/ai-insights/${encodeURIComponent(exercise)}?${params}`);
+    const aiData = await aiRes.json();
+    console.log(aiData)
+    renderCardioAiInsights(aiData);
 
   } catch (err) {
     console.error("[trend fetch] Failed:", err);

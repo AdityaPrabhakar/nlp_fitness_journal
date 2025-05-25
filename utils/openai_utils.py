@@ -229,3 +229,82 @@ Do not include any text outside the JSON block.
 
     content = response.choices[0].message.content
     return json.loads(content)
+
+def recommend_followup_cardio(exercise_name, session_data, goal="improve endurance slightly"):
+    import json
+
+    # Detect available metrics
+    has_distance = any("distance" in s and s["distance"] for s in session_data)
+    has_duration = any("duration" in s and s["duration"] for s in session_data)
+    has_pace = any("pace" in s and s["pace"] for s in session_data)
+
+    formatted_sessions = "\n".join(
+        f"- Session {s['session_id']} on {s['date']}:"
+        + (f" {s['distance']} miles" if has_distance and s.get("distance") else "")
+        + (f", {s['duration']} min" if has_duration and s.get("duration") else "")
+        + (f", {s['pace']} min/mile" if has_pace and s.get("pace") else "")
+        for s in session_data
+    )
+
+    guidelines = f"""
+Guidelines:
+- Recommend a realistic 1–5% improvement in each field independently.
+- Return a SEPARATE recommendation for each metric you find in the user's history.
+- Do NOT include any field in a recommendation if that field wasn't tracked before.
+- Do NOT combine metrics in a single recommendation.
+- Make sure each recommendation improves ONLY ONE FIELD AT A TIME.
+
+Return valid JSON in this format:
+
+{{
+  "recommendations": [
+    {{
+      "improved_metric": "distance",
+      "recommended_session": {{
+        "distance_miles": <value>
+      }},
+      "rationale": "Why this small distance improvement makes sense."
+    }},
+    {{
+      "improved_metric": "duration",
+      "recommended_session": {{
+        "duration_minutes": <value>
+      }},
+      "rationale": "Why this slight duration increase helps."
+    }},
+    {{
+      "improved_metric": "pace",
+      "recommended_session": {{
+        "target_pace_min_per_mile": <value>
+      }},
+      "rationale": "Why adjusting pace could improve performance."
+    }}
+  ]
+}}
+
+Only include entries for supported metrics. No text outside the JSON object.
+"""
+
+    prompt = f"""
+You are a cardio coach helping an intermediate user optimize their next training sessions by focusing on individual aspects of their workouts.
+
+Exercise: {exercise_name}
+Past sessions:
+{formatted_sessions}
+
+Goal: {goal}
+{guidelines}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that gives intelligent cardio training suggestions."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3,
+    )
+
+    content = response.choices[0].message.content.strip()
+
+    return json.loads(content)
