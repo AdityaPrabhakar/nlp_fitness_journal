@@ -16,7 +16,7 @@
 
 {% block scripts %}
 <script type="module">
-  import { enforceAuth } from "{{ url_for('static', filename='js/checkAuth.js') }}";
+  import { enforceAuth } from "{{ url_for('static', filename='js/auth/checkAuth.js') }}";
   enforceAuth("protected-content");
 </script>
 <script type="module" src="{{ url_for('static', filename='js/log.js') }}"></script>

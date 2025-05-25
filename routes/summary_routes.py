@@ -157,6 +157,7 @@ def pr_summary():
             PersonalRecord.type,
             PersonalRecord.field,
             PersonalRecord.value,
+            PersonalRecord.units,  # Include units here
             PersonalRecord.session_id,
             WorkoutSession.date
         )
@@ -175,8 +176,9 @@ def pr_summary():
             "type": pr.type,
             "field": pr.field,
             "value": pr.value,
+            "units": pr.units,  # Include units in JSON
             "session_id": pr.session_id,
-            "date": pr.date.format()
+            "date": pr.date.format()  # Use isoformat for safe serialization
         }
         for pr in prs
     ]

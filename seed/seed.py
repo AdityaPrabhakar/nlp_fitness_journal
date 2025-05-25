@@ -1,7 +1,8 @@
 import json
 from config import TestingConfig
 from init import create_app, db
-from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
+from models import User, WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
+from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
 from flask import current_app
 
@@ -29,9 +30,19 @@ def seed_test_data():
         db.drop_all()
         db.create_all()
 
-        print("Seeding test data...")
+        print("Seeding test user...")
+        test_user = User(
+            id=1,
+            email="sampleuser@example.com",
+            display_name="SampleUser",
+            password_hash=generate_password_hash("Password123!"),
+            bodyweight=180.0,
+            height=70.0
+        )
+        db.session.add(test_user)
+        db.session.commit()
 
-        # Set a fixed user_id for all test sessions
+        print("Seeding workout session data...")
         TEST_USER_ID = 1
 
         for session_data in sample_sessions:

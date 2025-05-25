@@ -1,5 +1,9 @@
-from flask import Blueprint, jsonify, render_template
+from datetime import datetime
+
+from flask import Blueprint, jsonify, render_template, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy.orm import joinedload
+
 from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
 from init import db
 
@@ -71,3 +75,82 @@ def get_session_details(session_id):
         'notes': session.notes,
         'entries': entry_list
     })
+
+@session_bp.route("/api/sessions/by-exercise", methods=["GET"])
+@jwt_required()
+def get_sessions_by_exercise():
+    user_id = get_jwt_identity()
+
+    exercise = request.args.get("exercise")
+    if not exercise:
+        return jsonify({"error": "Missing exercise parameter"}), 400
+
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+
+    # Base query for user's sessions
+    query = db.session.query(WorkoutSession).filter(
+        WorkoutSession.user_id == user_id
+    ).options(
+        joinedload(WorkoutSession.entries)
+        .joinedload(WorkoutEntry.strength_entries),
+        joinedload(WorkoutSession.entries)
+        .joinedload(WorkoutEntry.cardio_detail)
+    )
+
+    # Filter by date range
+    if start_date:
+        try:
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
+            query = query.filter(WorkoutSession.date >= start_date)
+        except ValueError:
+            return jsonify({"error": "Invalid start_date format"}), 400
+
+    if end_date:
+        try:
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
+            query = query.filter(WorkoutSession.date <= end_date)
+        except ValueError:
+            return jsonify({"error": "Invalid end_date format"}), 400
+
+    sessions = query.order_by(WorkoutSession.date).all()
+
+    output = []
+    for session in sessions:
+        session_data = {
+            "id": session.id,
+            "date": session.date,
+            "entries": []
+        }
+
+        for entry in session.entries:
+            if entry.exercise != exercise:
+                continue
+
+            entry_data = {
+                "exercise": entry.exercise,
+                "type": entry.type,
+                "notes": entry.notes,
+            }
+
+            if entry.type == "strength" and entry.strength_entries:
+                entry_data["sets"] = [
+                    {
+                        "set_number": s.set_number,
+                        "reps": s.reps,
+                        "weight": s.weight
+                    }
+                    for s in sorted(entry.strength_entries, key=lambda s: s.set_number)
+                ]
+            elif entry.type == "cardio" and entry.cardio_detail:
+                entry_data.update({
+                    "distance": entry.cardio_detail.distance,
+                    "duration": entry.cardio_detail.duration
+                })
+
+            session_data["entries"].append(entry_data)
+
+        if session_data["entries"]:
+            output.append(session_data)
+
+    return jsonify(output)

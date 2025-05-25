@@ -1,4 +1,4 @@
-import { authFetch } from './authFetch.js';
+import { authFetch } from './auth/authFetch.js';
 
 async function renderSummaryStats() {
   console.log("[INFO] Fetching summary stats...");
@@ -141,19 +141,43 @@ async function renderPRList() {
       return;
     }
 
-    list.innerHTML = prs.map(pr => `
-      <li>
-        <span class="font-medium capitalize">${pr.exercise}</span> -
-        <span class="text-blue-600 font-semibold">${pr.value}</span>
-        <span class="text-gray-500 text-xs">(${pr.field}, ${pr.date})</span>
-      </li>
-    `).join('');
+    list.innerHTML = prs.map(pr => {
+      let displayValue;
+
+      if (typeof pr.value === 'number') {
+        let precision;
+        switch (pr.units) {
+          case 'mi':
+            precision = 2;
+            break;
+          case 'min':
+          case 'lbs':
+          case 'min/mi':
+            precision = 1;
+            break;
+          default:
+            precision = 0;
+        }
+        displayValue = `${pr.value.toFixed(precision)} ${pr.units}`;
+      } else {
+        displayValue = `${pr.value} ${pr.units}`;
+      }
+
+      return `
+        <li>
+          <span class="font-medium capitalize">${pr.exercise}</span> -
+          <span class="text-blue-600 font-semibold">${displayValue}</span>
+          <span class="text-gray-500 text-xs">(${pr.field}, ${pr.date})</span>
+        </li>
+      `;
+    }).join('');
   } catch (err) {
     console.error("[ERROR] Failed to render PRs:", err);
     const list = document.getElementById('prList');
     list.innerHTML = `<li class="text-red-500 text-sm">Error loading PRs.</li>`;
   }
 }
+
 
 document.addEventListener('DOMContentLoaded', async () => {
   try {

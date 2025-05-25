@@ -1,12 +1,7 @@
 from init import db
 from models import PersonalRecord, WorkoutEntry, StrengthEntry, CardioEntry, WorkoutSession
 
-
 def track_prs_for_session(session, entries):
-    """
-    Tracks new personal records for the given workout session and list of entries.
-    Returns a list of new PRs triggered by this session.
-    """
     new_prs = []
     user_id = session.user_id
 
@@ -21,13 +16,13 @@ def track_prs_for_session(session, entries):
 
             if weights:
                 max_weight = max(weights)
-                new_pr = update_pr_record(user_id, exercise, "strength", "weight", max_weight, session.id)
+                new_pr = update_pr_record(user_id, exercise, "strength", "weight", max_weight, session.id, "lbs")
                 if new_pr:
                     new_prs.append(new_pr)
 
             if not weights and reps:
                 max_reps = max(reps)
-                new_pr = update_pr_record(user_id, exercise, "strength", "reps", max_reps, session.id)
+                new_pr = update_pr_record(user_id, exercise, "strength", "reps", max_reps, session.id, "reps")
                 if new_pr:
                     new_prs.append(new_pr)
 
@@ -36,12 +31,18 @@ def track_prs_for_session(session, entries):
             duration = entry.get("duration")
 
             if distance:
-                new_pr = update_pr_record(user_id, exercise, "cardio", "distance", distance, session.id)
+                new_pr = update_pr_record(user_id, exercise, "cardio", "distance", distance, session.id, "mi")
                 if new_pr:
                     new_prs.append(new_pr)
 
             if duration:
-                new_pr = update_pr_record(user_id, exercise, "cardio", "duration", duration, session.id)
+                new_pr = update_pr_record(user_id, exercise, "cardio", "duration", duration, session.id, "min")
+                if new_pr:
+                    new_prs.append(new_pr)
+
+            if distance and duration and distance > 0:
+                pace = duration / distance  # ⬅️ CHANGED from distance / duration
+                new_pr = update_pr_record(user_id, exercise, "cardio", "pace", pace, session.id, "min/mi")  # ⬅️ Updated units
                 if new_pr:
                     new_prs.append(new_pr)
 
@@ -49,21 +50,14 @@ def track_prs_for_session(session, entries):
     return new_prs
 
 
-def update_pr_record(user_id, exercise, type_, field, current_value, current_session_id):
+
+def update_pr_record(user_id, exercise, type_, field, current_value, current_session_id, units):
     """
-    Recalculates and updates the top personal record for the given user, exercise, type, and field.
+    Recalculates the top personal record for the given user, exercise, type, and field.
+    Saves the new record to the database if it surpasses all previous records.
     Returns the new PR dict if the current session created it, otherwise None.
     """
 
-    # Delete existing PR for this user/exercise/type/field
-    db.session.query(PersonalRecord).filter_by(
-        user_id=user_id,
-        exercise=exercise,
-        type=type_,
-        field=field
-    ).delete()
-
-    # Query the highest value for this field, scoped to the current user
     if type_ == "strength":
         if field == "weight":
             query = (
@@ -118,34 +112,53 @@ def update_pr_record(user_id, exercise, type_, field, current_value, current_ses
                 )
                 .order_by(CardioEntry.duration.desc())
             )
+        elif field == "pace":
+            query = (
+                db.session.query((CardioEntry.duration / CardioEntry.distance).label("pace"), WorkoutEntry.session_id)
+                .join(WorkoutEntry, CardioEntry.entry_id == WorkoutEntry.id)
+                .join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id)
+                .filter(
+                    WorkoutEntry.exercise == exercise,
+                    CardioEntry.distance != None,
+                    CardioEntry.duration != None,
+                    CardioEntry.distance > 0,  # ⬅️ Was duration > 0
+                    WorkoutSession.user_id == user_id
+                )
+                .order_by((CardioEntry.duration / CardioEntry.distance).asc())  # ⬅️ Ascending = better pace
+            )
         else:
             return None
-
-    else:
-        return None
 
     top_record = query.first()
 
     if top_record:
         value, session_id = top_record
 
-        # Save the new PR
-        db.session.add(PersonalRecord(
-            user_id=user_id,
-            exercise=exercise,
-            type=type_,
-            field=field,
-            value=value,
-            session_id=session_id
-        ))
+        existing_max = (
+            db.session.query(PersonalRecord)
+            .filter_by(user_id=user_id, exercise=exercise, type=type_, field=field)
+            .order_by(PersonalRecord.value.desc())
+            .first()
+        )
 
-        # Only return the PR if it was caused by the current session
+        if not existing_max or value > existing_max.value:
+            db.session.add(PersonalRecord(
+                user_id=user_id,
+                exercise=exercise,
+                type=type_,
+                field=field,
+                value=value,
+                units=units,
+                session_id=session_id
+            ))
+
         if session_id == current_session_id and current_value == value:
             return {
                 "exercise": exercise,
                 "type": type_,
                 "field": field,
                 "value": value,
+                "units": units,
                 "session_id": session_id
             }
 

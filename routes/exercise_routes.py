@@ -1,9 +1,26 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import WorkoutEntry, WorkoutSession, StrengthEntry, CardioEntry
-from init import db
+from sqlalchemy.orm import joinedload
+from datetime import datetime, timedelta
 
-exercise_bp = Blueprint("exercise", __name__)
+from init import db
+from models import WorkoutSession, WorkoutEntry, User, StrengthEntry, CardioEntry
+from utils import estimate_1rm, apply_date_filters
+from utils.openai_utils import recommend_followup_set, recommend_followup_cardio
+
+exercise_bp = Blueprint("exercise_bp", __name__)
+DEFAULT_REPS = 1
+
+# Utility to parse date range from query params
+def get_date_range():
+    try:
+        start_str = request.args.get("start_date")
+        end_str = request.args.get("end_date")
+        end_date = datetime.strptime(end_str, "%Y-%m-%d").date() if end_str else datetime.today().date()
+        start_date = datetime.strptime(start_str, "%Y-%m-%d").date() if start_str else end_date - timedelta(days=30)
+        return start_date, end_date
+    except Exception:
+        return None, None
 
 @exercise_bp.route("/api/exercises/<exercise_type>")
 @jwt_required()
@@ -15,7 +32,7 @@ def get_exercises_by_type(exercise_type):
 
     exercises = (
         db.session.query(WorkoutEntry.exercise)
-        .join(WorkoutSession)  # Join WorkoutEntry.session (WorkoutSession)
+        .join(WorkoutSession)
         .filter(
             WorkoutEntry.type == exercise_type,
             WorkoutSession.user_id == user_id
@@ -25,117 +42,273 @@ def get_exercises_by_type(exercise_type):
     )
 
     return jsonify([e[0] for e in exercises])
-
-@exercise_bp.route("/api/exercise-data/<string:exercise_name>")
+@exercise_bp.route("/api/exercise-data/strength/1rm-trend/<string:exercise>")
 @jwt_required()
-def get_exercise_data(exercise_name):
+def strength_1rm_trend(exercise):
     user_id = get_jwt_identity()
-    print(f"[INFO] Fetching exercise data for user {user_id}, exercise '{exercise_name}'")
+    formula = request.args.get("formula", "epley")
 
-    # Fetch strength entries
-    strength_results = (
-        db.session.query(StrengthEntry, WorkoutSession.date)
-        .join(WorkoutEntry, StrengthEntry.entry_id == WorkoutEntry.id)
-        .join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id)
-        .filter(
-            WorkoutEntry.exercise == exercise_name,
-            WorkoutSession.user_id == user_id
-        )
-        .all()
+    user = db.session.get(User, user_id)
+    if not user or not user.bodyweight:
+        return jsonify({"error": "User bodyweight not available"}), 400
+
+    query = db.session.query(WorkoutSession).filter(
+        WorkoutSession.user_id == user_id
+    ).options(
+        joinedload(WorkoutSession.entries)
+        .joinedload(WorkoutEntry.strength_entries)
     )
-    print(f"[INFO] Found {len(strength_results)} strength entries")
 
-    # Fetch cardio entries
-    cardio_results = (
-        db.session.query(CardioEntry, WorkoutSession.date)
-        .join(WorkoutEntry, CardioEntry.entry_id == WorkoutEntry.id)
-        .join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id)
-        .filter(
-            WorkoutEntry.exercise == exercise_name,
-            WorkoutSession.user_id == user_id
-        )
-        .all()
+    query, err_resp, status = apply_date_filters(query)
+    if err_resp:
+        return err_resp, status
+
+    sessions = query.order_by(WorkoutSession.date).all()
+    bodyweight = user.bodyweight
+    trend = []
+
+    for session in sessions:
+        max_1rm = None
+        for entry in session.entries:
+            if entry.type != "strength" or entry.exercise.lower() != exercise.lower():
+                continue
+            for s in entry.strength_entries:
+                reps = s.reps or DEFAULT_REPS
+                weight = s.weight if s.weight and s.weight > 0 else bodyweight
+                est_1rm = estimate_1rm(reps, weight, formula)
+                if est_1rm is not None:
+                    max_1rm = max(max_1rm or 0, est_1rm)
+        if max_1rm:
+            trend.append({
+                "session_id": session.id,
+                "date": session.date.format(),
+                "estimated_1rm": round(max_1rm, 2)
+            })
+
+    return jsonify(trend)
+
+@exercise_bp.route("/api/exercise-data/strength/volume-trend/<string:exercise>")
+@jwt_required()
+def strength_volume_trend(exercise):
+    user_id = get_jwt_identity()
+
+    user = db.session.get(User, user_id)
+    if not user or not user.bodyweight:
+        return jsonify({"error": "User bodyweight not available"}), 400
+
+    query = db.session.query(WorkoutSession).filter(
+        WorkoutSession.user_id == user_id
+    ).options(
+        joinedload(WorkoutSession.entries)
+        .joinedload(WorkoutEntry.strength_entries)
     )
-    print(f"[INFO] Found {len(cardio_results)} cardio entries")
 
-    def estimate_1rm(weight, reps):
-        if weight is None or reps is None or reps == 0:
-            return None
-        return weight * (1 + reps / 30)
+    query, err_resp, status = apply_date_filters(query)
+    if err_resp:
+        return err_resp, status
 
-    def get_intensity_multiplier(intensity):
-        if intensity >= 0.9:
-            return 1.5
-        elif intensity >= 0.8:
-            return 1.2
-        elif intensity >= 0.7:
-            return 1.0
-        elif intensity >= 0.6:
-            return 0.7
+    sessions = query.order_by(WorkoutSession.date).all()
+    bodyweight = user.bodyweight
+    trend = []
+
+    for session in sessions:
+        total_volume = 0
+        for entry in session.entries:
+            if entry.type != "strength" or entry.exercise.lower() != exercise.lower():
+                continue
+            for s in entry.strength_entries:
+                reps = s.reps or DEFAULT_REPS
+                weight = s.weight if s.weight and s.weight > 0 else bodyweight
+                total_volume += reps * weight
+        if total_volume > 0:
+            trend.append({
+                "date": session.date.format(),
+                "volume": round(total_volume, 2)
+            })
+
+    return jsonify(trend)
+
+@exercise_bp.route("/api/exercise-data/strength/relative-intensity/<string:exercise_name>")
+@jwt_required()
+def get_relative_intensity(exercise_name):
+    user_id = get_jwt_identity()
+    formula = request.args.get("formula", "epley").lower()
+
+    user = db.session.get(User, user_id)
+    if not user or not user.bodyweight:
+        return jsonify({"error": "User bodyweight not available"}), 400
+
+    body_weight = user.bodyweight
+
+    # Base query
+    query = db.session.query(
+        StrengthEntry.reps,
+        StrengthEntry.weight,
+        StrengthEntry.set_number,
+        WorkoutSession.date
+    ).join(WorkoutEntry, StrengthEntry.entry_id == WorkoutEntry.id
+    ).join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id
+    ).filter(
+        WorkoutEntry.type == "strength",
+        WorkoutEntry.exercise.ilike(exercise_name),
+        WorkoutSession.user_id == user_id
+    )
+
+    # Apply date filters
+    query, err_resp, status = apply_date_filters(query)
+    if err_resp:
+        return err_resp, status
+
+    sets = query.order_by(WorkoutSession.date, StrengthEntry.set_number).all()
+
+    parsed_sets = []
+    all_1rms = []
+
+    # Step 1: Parse all sets and calculate per-set 1RMs
+    for reps, weight, set_number, date in sets:
+        reps = reps or DEFAULT_REPS
+        weight = weight if weight and weight > 0 else body_weight
+        est_1rm = estimate_1rm(reps, weight, formula=formula)
+        if est_1rm:
+            parsed_sets.append({
+                "set_number": set_number,
+                "reps": reps,
+                "weight": weight,
+                "date": date,
+                "estimated_1rm": est_1rm
+            })
+            all_1rms.append(est_1rm)
+
+    if not all_1rms:
+        return jsonify([])
+
+    # Step 2: Use the highest 1RM as the reference
+    reference_1rm = max(all_1rms)
+
+    # Step 3: Compute relative intensity and training zone
+    results = []
+    for s in parsed_sets:
+        relative_intensity = (s["weight"] / reference_1rm) * 100
+        if relative_intensity >= 85:
+            zone = "Strength"
+        elif 65 <= relative_intensity < 85:
+            zone = "Hypertrophy"
         else:
-            return 0.4
+            zone = "Endurance"
 
-    one_rms = [
-        estimate_1rm(s.weight, s.reps)
-        for s, _ in strength_results
-        if s.weight is not None and s.reps is not None
-    ]
-    max_1rm = max(one_rms) if one_rms else None
-    print(f"[INFO] Max 1RM for '{exercise_name}': {max_1rm}")
-
-    data = []
-
-    for s, date in strength_results:
-        sets = 1
-        reps = s.reps
-        weight = s.weight
-
-        if weight is not None and reps is not None and max_1rm:
-            intensity = weight / max_1rm
-            multiplier = get_intensity_multiplier(intensity)
-            effort = sets * reps * weight * multiplier
-            print(f"[STRENGTH] {date}: reps={reps}, weight={weight}, intensity={intensity:.2f}, multiplier={multiplier}, effort={effort:.2f}")
-        elif weight is None and reps is not None:
-            effort = sets * reps * 5  # fallback effort estimate
-            print(f"[STRENGTH] {date}: bodyweight fallback, reps={reps}, effort={effort}")
-        else:
-            effort = None
-            print(f"[WARNING] {date}: Skipped strength entry (reps={reps}, weight={weight})")
-
-        data.append({
-            "type": "strength",
-            "date": date,
-            "reps": reps,
-            "weight": weight,
-            "sets": sets,
-            "estimated_1rm": estimate_1rm(weight, reps) if reps and weight else None,
-            "effort": effort
+        results.append({
+            "set_number": s["set_number"],
+            "date": s["date"].format(),
+            "weight": s["weight"],
+            "reps": s["reps"],
+            "estimated_1rm": round(s["estimated_1rm"], 1),
+            "relative_intensity": round(relative_intensity, 1),
+            "zone": zone
         })
 
-    for c, date in cardio_results:
-        if c.distance and c.duration:
-            speed = c.distance / (c.duration / 60)
-            effort = c.distance * speed**1.2
-            print(f"[CARDIO] {date}: dist={c.distance}, dur={c.duration}min, speed={speed:.2f}km/h, effort={effort:.2f}")
-        elif c.distance:
-            effort = c.distance * 10
-            print(f"[CARDIO] {date}: distance-only fallback, effort={effort}")
-        elif c.duration:
-            effort = c.duration * 5
-            print(f"[CARDIO] {date}: duration-only fallback, effort={effort}")
-        else:
-            effort = None
-            print(f"[WARNING] {date}: Skipped cardio entry (no distance or duration)")
+    return jsonify(results)
 
-        data.append({
-            "type": "cardio",
-            "date": date,
-            "duration_minutes": c.duration,
-            "distance": c.distance,
-            "effort": effort
+@exercise_bp.route("/api/exercise-data/strength/ai-insights/<string:exercise_name>")
+@jwt_required()
+def suggest_next_set(exercise_name):
+    user_id = get_jwt_identity()
+    goal = request.args.get("goal", "increase 1RM slightly")
+    formula = request.args.get("formula", "epley").lower()
+
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 400
+
+    query = db.session.query(
+        StrengthEntry.reps,
+        StrengthEntry.weight,
+        StrengthEntry.set_number,
+        WorkoutSession.date,
+        WorkoutSession.id.label("session_id")
+    ).join(WorkoutEntry, StrengthEntry.entry_id == WorkoutEntry.id
+    ).join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id
+    ).filter(
+        WorkoutEntry.type == "strength",
+        WorkoutEntry.exercise.ilike(exercise_name),
+        WorkoutSession.user_id == user_id
+    )
+
+    # Apply optional date range
+    query, err_resp, status = apply_date_filters(query)
+    if err_resp:
+        return err_resp, status
+
+    sets = query.order_by(WorkoutSession.date, StrengthEntry.set_number).all()
+
+    if not sets:
+        return jsonify({"error": "No training data found for this exercise"}), 404
+
+    sets_details = []
+    for reps, weight, set_number, date, session_id in sets:
+        set_info = {
+            "session_id": session_id,
+            "set_number": set_number,
+            "reps": reps or DEFAULT_REPS,
+            "date": date.format()
+        }
+        if weight and weight > 0:
+            set_info["weight"] = weight  # only include weight if explicitly provided
+        sets_details.append(set_info)
+
+    recommendation = recommend_followup_set(
+        exercise_name,
+        sets_details,
+        goal=goal,
+    )
+
+    return jsonify(recommendation)
+
+@exercise_bp.route("/api/exercise-data/cardio/ai-insights/<string:exercise_name>")
+@jwt_required()
+def suggest_next_cardio_session(exercise_name):
+    import json
+    from collections import defaultdict
+    user_id = get_jwt_identity()
+    goal = request.args.get("goal", "improve endurance slightly")
+
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 400
+
+    query = db.session.query(
+        CardioEntry.duration,
+        CardioEntry.distance,
+        WorkoutSession.date,
+        WorkoutSession.id.label("session_id")
+    ).join(WorkoutEntry, CardioEntry.entry_id == WorkoutEntry.id
+    ).join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id
+    ).filter(
+        WorkoutEntry.type == "cardio",
+        WorkoutEntry.exercise.ilike(exercise_name),
+        WorkoutSession.user_id == user_id
+    )
+
+    # Apply optional date range
+    query, err_resp, status = apply_date_filters(query)
+    if err_resp:
+        return err_resp, status
+
+    sessions = query.order_by(WorkoutSession.date).all()
+
+    if not sessions:
+        return jsonify({"error": "No cardio data found for this exercise"}), 404
+
+    # Prepare data for AI
+    session_data = []
+    for dur, dist, date, session_id in sessions:
+        # Safeguard against zero distance
+        pace = round(dur / dist, 2) if dist and dist > 0 else None
+        session_data.append({
+            "session_id": session_id,
+            "duration": dur,
+            "distance": dist,
+            "pace": pace,
+            "date": date.format()
         })
 
-    data.sort(key=lambda x: x["date"])
-    print(f"[INFO] Returning {len(data)} total entries for '{exercise_name}'")
-    return jsonify(data)
-
+    return jsonify(recommend_followup_cardio(exercise_name, session_data, goal=goal))
