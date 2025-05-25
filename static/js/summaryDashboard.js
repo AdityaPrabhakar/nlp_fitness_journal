@@ -144,19 +144,23 @@ async function renderPRList() {
     list.innerHTML = prs.map(pr => {
       let displayValue;
 
-      if (pr.field === 'pace' && pr.units === 'min/mi') {
-        const paceValue = pr.value > 0 ? (1 / pr.value) : 0;
-        const minutes = Math.floor(paceValue);
-        const seconds = Math.round((paceValue - minutes) * 60);
-        const secondsStr = seconds < 10 ? `0${seconds}` : `${seconds}`;
-        displayValue = `${minutes}:${secondsStr} ${pr.units}`;
+      if (typeof pr.value === 'number') {
+        let precision;
+        switch (pr.units) {
+          case 'mi':
+            precision = 2;
+            break;
+          case 'min':
+          case 'lbs':
+          case 'min/mi':
+            precision = 1;
+            break;
+          default:
+            precision = 0;
+        }
+        displayValue = `${pr.value.toFixed(precision)} ${pr.units}`;
       } else {
-        const formatted = typeof pr.value === 'number'
-          ? (pr.units === 'mi' ? pr.value.toFixed(2)
-              : pr.units === 'min' || pr.units === 'lbs' ? pr.value.toFixed(1)
-              : pr.value)
-          : pr.value;
-        displayValue = `${formatted} ${pr.units}`;
+        displayValue = `${pr.value} ${pr.units}`;
       }
 
       return `

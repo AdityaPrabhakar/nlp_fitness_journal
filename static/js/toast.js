@@ -10,9 +10,8 @@ export function showPRToast(prs) {
         let message = `🎉 New PR: ${pr.exercise} — `;
 
         if (pr.field === 'pace' && pr.units === 'min/mi') {
-            const paceValue = pr.value > 0 ? (1 / pr.value) : 0;
-            const minutes = Math.floor(paceValue);
-            const seconds = Math.round((paceValue - minutes) * 60);
+            const minutes = Math.floor(pr.value);
+            const seconds = Math.round((pr.value - minutes) * 60);
             const secondsStr = seconds < 10 ? `0${seconds}` : `${seconds}`;
             message += `${minutes}:${secondsStr} ${pr.units}`;
         } else {

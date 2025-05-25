@@ -2,10 +2,6 @@ from init import db
 from models import PersonalRecord, WorkoutEntry, StrengthEntry, CardioEntry, WorkoutSession
 
 def track_prs_for_session(session, entries):
-    """
-    Tracks new personal records for the given workout session and list of entries.
-    Returns a list of new PRs triggered by this session.
-    """
     new_prs = []
     user_id = session.user_id
 
@@ -44,14 +40,15 @@ def track_prs_for_session(session, entries):
                 if new_pr:
                     new_prs.append(new_pr)
 
-            if distance and duration and duration > 0:
-                pace = distance / duration
-                new_pr = update_pr_record(user_id, exercise, "cardio", "pace", pace, session.id, "mi/min")
+            if distance and duration and distance > 0:
+                pace = duration / distance  # ⬅️ CHANGED from distance / duration
+                new_pr = update_pr_record(user_id, exercise, "cardio", "pace", pace, session.id, "min/mi")  # ⬅️ Updated units
                 if new_pr:
                     new_prs.append(new_pr)
 
     db.session.commit()
     return new_prs
+
 
 
 def update_pr_record(user_id, exercise, type_, field, current_value, current_session_id, units):
@@ -117,23 +114,20 @@ def update_pr_record(user_id, exercise, type_, field, current_value, current_ses
             )
         elif field == "pace":
             query = (
-                db.session.query((CardioEntry.distance / CardioEntry.duration).label("pace"), WorkoutEntry.session_id)
+                db.session.query((CardioEntry.duration / CardioEntry.distance).label("pace"), WorkoutEntry.session_id)
                 .join(WorkoutEntry, CardioEntry.entry_id == WorkoutEntry.id)
                 .join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id)
                 .filter(
                     WorkoutEntry.exercise == exercise,
                     CardioEntry.distance != None,
                     CardioEntry.duration != None,
-                    CardioEntry.duration > 0,
+                    CardioEntry.distance > 0,  # ⬅️ Was duration > 0
                     WorkoutSession.user_id == user_id
                 )
-                .order_by((CardioEntry.distance / CardioEntry.duration).desc())
+                .order_by((CardioEntry.duration / CardioEntry.distance).asc())  # ⬅️ Ascending = better pace
             )
         else:
             return None
-
-    else:
-        return None
 
     top_record = query.first()
 

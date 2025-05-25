@@ -1,6 +1,8 @@
 import { authFetch } from './auth/authFetch.js';
 import { renderSessionTable } from "./tables/sessionTable.js";
-import { renderDetailedSessionsChart } from "./charts/strength/strengthDetailedSessionsChart.js";
+import { renderCardioDetailedSessionsChart } from "./charts/cardio/cardioDetailedSessionsChart.js"; // <-- updated import
+import { renderCardioPrCharts } from "./charts/cardio/renderCardioPrCharts.js";
+
 
 const select = document.getElementById("exerciseSelect");
 const startDateInput = document.getElementById("startDate");
@@ -49,19 +51,46 @@ select.addEventListener("change", async () => {
     const prData = await prRes.json();
 
     if (prData.success) {
-      const latest = prData.personal_records.find(pr => pr.is_latest);
-      if (latest) {
-        document.getElementById("latestPrHighlight").textContent = `${latest.value} ${latest.units} on ${new Date(latest.datetime).toLocaleDateString()}`;
+      const latestPRs = prData.personal_records.filter(pr => pr.is_latest);
+      const highlightContainer = document.getElementById("latestPrHighlight");
+      highlightContainer.innerHTML = ""; // Clear previous content
+
+      if (latestPRs.length > 0) {
+        latestPRs.forEach(pr => {
+          const card = document.createElement("div");
+          card.className = "bg-white shadow-md rounded-lg p-4 mb-3 border-l-4 border-green-500";
+
+          const fieldName = pr.field.toUpperCase();
+          const dateStr = new Date(pr.datetime).toLocaleDateString();
+
+          let valueDisplay;
+          if (pr.field === 'pace' && pr.units === 'min/mi') {
+            const minutes = Math.floor(pr.value);
+            const seconds = Math.floor((pr.value - minutes) * 60);  // just scale to 60
+            const secondsStr = seconds.toString().padStart(2, '0');
+            valueDisplay = `${minutes}:${secondsStr} ${pr.units}`;
+          } else {
+            valueDisplay = `${pr.value} ${pr.units}`;
+          }
+
+          card.innerHTML = `
+            <div class="text-lg font-semibold text-gray-800">🏅 ${fieldName}</div>
+            <div class="text-gray-600 text-sm">${valueDisplay}</div>
+            <div class="text-gray-500 text-xs">Set on ${dateStr}</div>
+          `;
+
+          highlightContainer.appendChild(card);
+        });
       } else {
-        document.getElementById("latestPrHighlight").textContent = "No records found.";
+        highlightContainer.innerHTML = `<div class="text-gray-500 italic">No records found.</div>`;
       }
-    } else {
-      console.error("Failed to load PR data:", prData.error);
-      document.getElementById("latestPrHighlight").textContent = "Error loading PR data.";
+
+      // ✅ Render cardio PR charts
+      renderCardioPrCharts(prData.personal_records);
     }
 
     await renderSessionTable(exercise, startDate, endDate);
-    await renderDetailedSessionsChart(exercise, startDate, endDate);
+    await renderCardioDetailedSessionsChart(exercise, startDate, endDate); // <-- updated here
 
   } catch (err) {
     console.error("[trend fetch] Failed:", err);

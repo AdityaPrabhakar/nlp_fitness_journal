@@ -46,7 +46,7 @@ export async function renderSessionTable(exercise, startDate, endDate) {
             details = "No set data";
           }
         } else if (entry.type === "cardio") {
-          details = `${entry.distance ?? "-"} km in ${entry.duration ?? "-"} min`;
+          details = `${entry.distance ?? "-"} mi in ${entry.duration ?? "-"} min`;
         }
 
         tableHtml += `

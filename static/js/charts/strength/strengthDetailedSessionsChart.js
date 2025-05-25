@@ -2,7 +2,7 @@ import { authFetch } from "../../auth/authFetch.js";
 
 let sessionDetailChart = null;
 
-export async function renderDetailedSessionsChart(exercise, startDate, endDate) {
+export async function renderStrengthDetailedSessionsChart(exercise, startDate, endDate) {
   const container = document.getElementById("sessionChartContainer");
   container.innerHTML = "<canvas id='sessionChart'></canvas>";
 
@@ -58,7 +58,7 @@ export async function renderDetailedSessionsChart(exercise, startDate, endDate) 
         labels,
         datasets: [
           {
-            label: "Weight (kg)",
+            label: "Weight (lbs)",
             type: "bar",
             data: weightData,
             backgroundColor: "rgba(59, 130, 246, 0.6)",
@@ -113,7 +113,12 @@ export async function renderDetailedSessionsChart(exercise, startDate, endDate) 
           tooltip: {
             callbacks: {
               label: function(context) {
-                return `${context.dataset.label}: ${context.parsed.y}`;
+                const label = context.dataset.label || '';
+                const value = context.parsed.y;
+
+                // If value is null, undefined, or NaN, show "-"
+                const displayValue = (value === null || value === undefined || isNaN(value)) ? "-" : value;
+                return `${label}: ${displayValue}`;
               }
             }
           },

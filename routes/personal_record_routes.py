@@ -77,7 +77,7 @@ def get_personal_records_by_exercise(exercise):
             except ValueError:
                 return jsonify({"success": False, "error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
 
-        records = query.order_by(PersonalRecord.field.asc()).all()
+        records = query.order_by(PersonalRecord.field.asc(), PersonalRecord.datetime.desc()).all()
 
         pr_by_field = defaultdict(list)
         for pr in records:
@@ -85,7 +85,7 @@ def get_personal_records_by_exercise(exercise):
 
         result = []
         for field, prs in pr_by_field.items():
-            highest_pr = max(prs, key=lambda pr: pr.value)
+            latest_pr = max(prs, key=lambda pr: pr.datetime)  # <-- changed here
             for pr in prs:
                 result.append({
                     "exercise": pr.exercise,
@@ -95,7 +95,7 @@ def get_personal_records_by_exercise(exercise):
                     "units": pr.units,
                     "session_id": pr.session_id,
                     "datetime": pr.datetime.isoformat(),
-                    "is_latest": pr.id == highest_pr.id
+                    "is_latest": pr.id == latest_pr.id
                 })
 
         return jsonify({
