@@ -1,4 +1,4 @@
-import { authFetch } from "../auth/authFetch.js";
+import { authFetch } from "../../auth/authFetch.js";
 
 let sessionDetailChart = null;
 

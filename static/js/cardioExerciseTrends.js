@@ -1,20 +1,15 @@
 import { authFetch } from './auth/authFetch.js';
-import { renderRmChart } from "./charts/strength/strengthRmChart.js";
-import { renderVolumeChart } from "./charts/strength/strengthVolumeChart.js";
-import { renderIntensityChart } from "./charts/strength/strengthIntensityChart.js";
 import { renderSessionTable } from "./tables/sessionTable.js";
 import { renderDetailedSessionsChart } from "./charts/strength/strengthDetailedSessionsChart.js";
-import { renderStrengthPrChart } from "./charts/strength/renderStrengthPrChart.js";
-import { renderAiInsights, showLoadingAiInsights } from "./charts/strength/strengthAiInsights.js";
 
 const select = document.getElementById("exerciseSelect");
 const startDateInput = document.getElementById("startDate");
 const endDateInput = document.getElementById("endDate");
 
-// Load only strength exercises
+// Load only cardio exercises
 async function loadExercises() {
   try {
-    const res = await authFetch(`/api/exercises/strength`);
+    const res = await authFetch(`/api/exercises/cardio`);
     const exercises = await res.json();
 
     select.innerHTML = "";
@@ -50,32 +45,16 @@ select.addEventListener("change", async () => {
   if (endDate) params.append("end_date", endDate);
 
   try {
-    const rmRes = await authFetch(`/api/exercise-data/strength/1rm-trend/${encodeURIComponent(exercise)}?${params}`);
-    const rmData = await rmRes.json();
-
-    const volumeRes = await authFetch(`/api/exercise-data/strength/volume-trend/${encodeURIComponent(exercise)}?${params}`);
-    const volumeData = await volumeRes.json();
-
-    const intensityRes = await authFetch(`/api/exercise-data/strength/relative-intensity/${encodeURIComponent(exercise)}?${params}`);
-    const intensityData = await intensityRes.json();
-
     const prRes = await authFetch(`/api/personal-records/by-exercise/${encodeURIComponent(exercise)}?${params}`);
     const prData = await prRes.json();
 
-    renderRmChart(rmData);
-    renderVolumeChart(volumeData);
-    renderIntensityChart(intensityData);
-
     if (prData.success) {
-      renderStrengthPrChart(prData.personal_records);
-
       const latest = prData.personal_records.find(pr => pr.is_latest);
       if (latest) {
         document.getElementById("latestPrHighlight").textContent = `${latest.value} ${latest.units} on ${new Date(latest.datetime).toLocaleDateString()}`;
       } else {
         document.getElementById("latestPrHighlight").textContent = "No records found.";
       }
-
     } else {
       console.error("Failed to load PR data:", prData.error);
       document.getElementById("latestPrHighlight").textContent = "Error loading PR data.";
@@ -83,12 +62,6 @@ select.addEventListener("change", async () => {
 
     await renderSessionTable(exercise, startDate, endDate);
     await renderDetailedSessionsChart(exercise, startDate, endDate);
-
-    // AI insights
-    showLoadingAiInsights();
-    const aiRes = await authFetch(`/api/exercise-data/strength/ai-insights/${encodeURIComponent(exercise)}?${params}`);
-    const aiData = await aiRes.json();
-    renderAiInsights(aiData);
 
   } catch (err) {
     console.error("[trend fetch] Failed:", err);

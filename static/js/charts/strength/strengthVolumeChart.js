@@ -1,18 +1,18 @@
-const rmChartCanvas = document.getElementById("rmChart");
+const volumeChartCanvas = document.getElementById("strengthVolumeChart");
 
-let rmChart;
+let strengthVolumeChart;
 
-export function renderRmChart(data) {
-  if (rmChart) rmChart.destroy();
-  rmChart = new Chart(rmChartCanvas, {
+export function renderVolumeChart(data) {
+  if (strengthVolumeChart) strengthVolumeChart.destroy();
+  strengthVolumeChart = new Chart(volumeChartCanvas, {
     type: 'line',
     data: {
       labels: data.map(d => d.date),
       datasets: [{
-        label: "Estimated 1RM",
-        data: data.map(d => d.estimated_1rm),
-        borderColor: "rgb(59, 130, 246)",
-        backgroundColor: "rgba(59, 130, 246, 0.2)",
+        label: "Total Volume",
+        data: data.map(d => d.volume),
+        borderColor: "rgb(16, 185, 129)",
+        backgroundColor: "rgba(16, 185, 129, 0.2)",
         tension: 0.2,
         fill: true,
         pointRadius: 4,
@@ -22,8 +22,8 @@ export function renderRmChart(data) {
     options: {
       scales: {
         y: {
-          title: { display: true, text: '1RM (lbs)' },
-          beginAtZero: false
+          title: { display: true, text: 'Volume (lbs)' },
+          beginAtZero: true
         },
         x: {
           title: { display: true, text: 'Date' },

@@ -1,9 +1,9 @@
-const intensityChartCanvas = document.getElementById("intensityChart");
+const intensityChartCanvas = document.getElementById("strengthIntensityChart");
 
-let intensityChart;
+let strengthIntensityChart;
 
 export function renderIntensityChart(data) {
-  if (intensityChart) intensityChart.destroy();
+  if (strengthIntensityChart) strengthIntensityChart.destroy();
 
   // Map to track how many Set #1s we've seen per date
   const sessionCountPerDate = {};
@@ -29,7 +29,7 @@ export function renderIntensityChart(data) {
     return "rgba(59, 130, 246, 0.8)";
   });
 
-  intensityChart = new Chart(intensityChartCanvas, {
+  strengthIntensityChart = new Chart(intensityChartCanvas, {
     type: 'bar',
     data: {
       labels,
