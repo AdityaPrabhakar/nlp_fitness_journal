@@ -118,3 +118,104 @@ def clean_entry(entry):
 def clean_entries(entries):
     """Cleans and normalizes a list of entries."""
     return [clean_entry(entry) for entry in entries]
+
+
+# noinspection PyTypeChecker
+def recommend_followup_set(exercise_name, sets_details, goal="increase 1RM slightly"):
+    """
+    Recommends a follow-up set scheme for a strength exercise using OpenAI.
+    Automatically infers average sets per session using `session_id` in `sets_details`.
+    Skips weight recommendations for bodyweight-only movements.
+    """
+    from collections import defaultdict
+
+    valid_sets = [s for s in sets_details if 'reps' in s and 'set_number' in s and 'session_id' in s]
+    has_weights = any("weight" in s and s["weight"] > 0 for s in valid_sets)
+
+    session_counts = defaultdict(int)
+    for s in valid_sets:
+        session_counts[s["session_id"]] += 1
+
+    num_sessions = len(session_counts)
+    total_sets = len(valid_sets)
+    avg_sets = round(total_sets / num_sessions) if num_sessions > 0 else total_sets
+
+    if has_weights:
+        formatted_sets = "\n".join(
+            f"- Set {s['set_number']} (Session {s['session_id']}): {s['reps']} reps at {s['weight']} lbs"
+            for s in valid_sets if "weight" in s
+        )
+        guidelines = f"""
+Guidelines:
+- Keep total sets within ±1 of the average session count ({avg_sets} sets).
+- Recommend weights ONLY in increments of 5 lbs (e.g., 185, 190, 195 — not 187 or 193).
+- Use realistic progression: keep volume similar unless the goal requests more.
+- You may vary reps/weight per set, but avoid spikes in both simultaneously.
+- Target a ~1–3% increase in intensity if aiming for strength progression.
+- Do NOT overreach or propose unrealistic jumps in load or volume.
+
+Return ONLY strict JSON, exactly in this format:
+
+{{
+  "recommended_sets": [
+    {{ "set_number": 1, "reps": 5, "weight": 190 }},
+    {{ "set_number": 2, "reps": 4, "weight": 195 }},
+    {{ "set_number": 3, "reps": 3, "weight": 200 }}
+  ],
+  "rationale": "Brief reasoning here."
+}}
+"""
+    else:
+        formatted_sets = "\n".join(
+            f"- Set {s['set_number']} (Session {s['session_id']}): {s['reps']} reps"
+            for s in valid_sets
+        )
+        guidelines = f"""
+Guidelines:
+- Keep total sets within ±1 of the average session count ({avg_sets} sets).
+- Recommend realistic reps for bodyweight movements.
+- Do NOT include weights or assume weighted variations unless explicitly shown in the sets.
+- Favor slight progression in reps or density if aiming to improve.
+
+Return ONLY strict JSON, exactly in this format:
+
+{{
+  "recommended_sets": [
+    {{ "set_number": 1, "reps": 12 }},
+    {{ "set_number": 2, "reps": 10 }},
+    {{ "set_number": 3, "reps": 8 }}
+  ],
+  "rationale": "Brief reasoning here."
+}}
+"""
+
+    prompt = f"""
+You are a strength training coach helping an intermediate gym-goer. The user has completed:
+
+Exercise: {exercise_name}
+Performed sets:
+{formatted_sets}
+
+Goal: {goal}
+{guidelines}
+
+Do not include any text outside the JSON block.
+    """
+
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a helpful assistant that provides realistic strength training set recommendations."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.3,
+    )
+
+    content = response.choices[0].message.content
+    return json.loads(content)

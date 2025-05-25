@@ -9,9 +9,9 @@ from datetime import datetime
 
 trend_bp = Blueprint('trend', __name__)
 
-@trend_bp.route("/api/exercise-trends")
+@trend_bp.route("/api/strength-exercise-trends")
 def exercise_trends():
-    return render_template("partials/exercise_trends.html")
+    return render_template("partials/strength_exercise_trends.html")
 
 @trend_bp.route('/api/workout-trends/<int:session_id>', methods=['GET'])
 @jwt_required()

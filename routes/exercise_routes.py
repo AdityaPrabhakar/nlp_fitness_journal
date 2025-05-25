@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from init import db
 from models import WorkoutSession, WorkoutEntry, User, StrengthEntry
 from utils import estimate_1rm, apply_date_filters
+from utils.openai_utils import recommend_followup_set
 
 exercise_bp = Blueprint("exercise_bp", __name__)
 DEFAULT_REPS = 1
@@ -41,7 +42,7 @@ def get_exercises_by_type(exercise_type):
     )
 
     return jsonify([e[0] for e in exercises])
-@exercise_bp.route("/api/exercise-data/1rm-trend/<string:exercise>")
+@exercise_bp.route("/api/exercise-data/strength/1rm-trend/<string:exercise>")
 @jwt_required()
 def strength_1rm_trend(exercise):
     user_id = get_jwt_identity()
@@ -86,7 +87,7 @@ def strength_1rm_trend(exercise):
 
     return jsonify(trend)
 
-@exercise_bp.route("/api/exercise-data/volume-trend/<string:exercise>")
+@exercise_bp.route("/api/exercise-data/strength/volume-trend/<string:exercise>")
 @jwt_required()
 def strength_volume_trend(exercise):
     user_id = get_jwt_identity()
@@ -127,7 +128,7 @@ def strength_volume_trend(exercise):
 
     return jsonify(trend)
 
-@exercise_bp.route("/api/exercise-data/relative-intensity/<string:exercise_name>")
+@exercise_bp.route("/api/exercise-data/strength/relative-intensity/<string:exercise_name>")
 @jwt_required()
 def get_relative_intensity(exercise_name):
     user_id = get_jwt_identity()
@@ -207,3 +208,57 @@ def get_relative_intensity(exercise_name):
 
     return jsonify(results)
 
+@exercise_bp.route("/api/exercise-data/strength/ai-insights/<string:exercise_name>")
+@jwt_required()
+def suggest_next_set(exercise_name):
+    user_id = get_jwt_identity()
+    goal = request.args.get("goal", "increase 1RM slightly")
+    formula = request.args.get("formula", "epley").lower()
+
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 400
+
+    query = db.session.query(
+        StrengthEntry.reps,
+        StrengthEntry.weight,
+        StrengthEntry.set_number,
+        WorkoutSession.date,
+        WorkoutSession.id.label("session_id")
+    ).join(WorkoutEntry, StrengthEntry.entry_id == WorkoutEntry.id
+    ).join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id
+    ).filter(
+        WorkoutEntry.type == "strength",
+        WorkoutEntry.exercise.ilike(exercise_name),
+        WorkoutSession.user_id == user_id
+    )
+
+    # Apply optional date range
+    query, err_resp, status = apply_date_filters(query)
+    if err_resp:
+        return err_resp, status
+
+    sets = query.order_by(WorkoutSession.date, StrengthEntry.set_number).all()
+
+    if not sets:
+        return jsonify({"error": "No training data found for this exercise"}), 404
+
+    sets_details = []
+    for reps, weight, set_number, date, session_id in sets:
+        set_info = {
+            "session_id": session_id,
+            "set_number": set_number,
+            "reps": reps or DEFAULT_REPS,
+            "date": date.format()
+        }
+        if weight and weight > 0:
+            set_info["weight"] = weight  # only include weight if explicitly provided
+        sets_details.append(set_info)
+
+    recommendation = recommend_followup_set(
+        exercise_name,
+        sets_details,
+        goal=goal,
+    )
+
+    return jsonify(recommendation)
