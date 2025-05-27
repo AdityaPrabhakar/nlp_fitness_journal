@@ -145,7 +145,8 @@ def get_sessions_by_exercise():
             elif entry.type == "cardio" and entry.cardio_detail:
                 entry_data.update({
                     "distance": entry.cardio_detail.distance,
-                    "duration": entry.cardio_detail.duration
+                    "duration": entry.cardio_detail.duration,
+                    "pace" : entry.cardio_detail.pace
                 })
 
             session_data["entries"].append(entry_data)

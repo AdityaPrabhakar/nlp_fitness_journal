@@ -2,11 +2,15 @@ import { authFetch } from './auth/authFetch.js';
 import { renderSessionTable } from "./tables/sessionTable.js";
 import { renderCardioDetailedSessionsChart } from "./charts/cardio/cardioDetailedSessionsChart.js";
 import { renderCardioPrCharts } from "./charts/cardio/renderCardioPrCharts.js";
-import { renderCardioAiInsights, showLoadingCardioAiInsights } from "./charts/cardio/cardioAiInsights.js"; // <-- NEW IMPORTS
+import { renderCardioAiInsights, showLoadingCardioAiInsights } from "./charts/cardio/cardioAiInsights.js";
 
+// DOM elements
 const select = document.getElementById("exerciseSelect");
 const startDateInput = document.getElementById("startDate");
 const endDateInput = document.getElementById("endDate");
+
+// Track the latest request
+let currentRequestId = 0;
 
 // Load only cardio exercises
 async function loadExercises() {
@@ -46,9 +50,14 @@ select.addEventListener("change", async () => {
   if (startDate) params.append("start_date", startDate);
   if (endDate) params.append("end_date", endDate);
 
+  // Increment the request ID to invalidate older requests
+  const requestId = ++currentRequestId;
+
   try {
     const prRes = await authFetch(`/api/personal-records/by-exercise/${encodeURIComponent(exercise)}?${params}`);
     const prData = await prRes.json();
+
+    if (requestId !== currentRequestId) return; // Cancel if outdated
 
     if (prData.success) {
       const latestPRs = prData.personal_records.filter(pr => pr.is_latest);
@@ -95,11 +104,14 @@ select.addEventListener("change", async () => {
     showLoadingCardioAiInsights();
     const aiRes = await authFetch(`/api/exercise-data/cardio/ai-insights/${encodeURIComponent(exercise)}?${params}`);
     const aiData = await aiRes.json();
-    console.log(aiData)
+
+    if (requestId !== currentRequestId) return; // Cancel if outdated
     renderCardioAiInsights(aiData);
 
   } catch (err) {
-    console.error("[trend fetch] Failed:", err);
+    if (requestId === currentRequestId) {
+      console.error("[trend fetch] Failed:", err);
+    }
   }
 });
 

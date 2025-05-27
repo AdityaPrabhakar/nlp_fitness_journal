@@ -9,7 +9,7 @@
         "type": "cardio",
         "exercise": "swimming",
         "notes": "Maintained steady pace throughout.",
-        "cardio_detail": { "duration": 40, "distance": 1.0 }
+        "cardio_detail": { "duration": 40, "distance": 1.0, "pace": 40.0 }
       },
       {
         "type": "strength",
@@ -62,7 +62,7 @@
         "type": "cardio",
         "exercise": "running",
         "notes": "Good rhythm, picked up pace in last mile.",
-        "cardio_detail": { "duration": 36, "distance": 4.0 }
+        "cardio_detail": { "duration": 36, "distance": 4.0, "pace": 9.0 }
       },
       {
         "type": "strength",
@@ -94,7 +94,7 @@
         "type": "cardio",
         "exercise": "rowing",
         "notes": "Steady cadence, upper back worked hard.",
-        "cardio_detail": { "duration": 30, "distance": 3.5 }
+        "cardio_detail": { "duration": 30, "distance": 3.5, "pace": 8.57 }
       },
       {
         "type": "strength",
@@ -147,7 +147,109 @@
         "type": "cardio",
         "exercise": "hiking",
         "notes": "Some steep inclines, took steady breaks.",
-        "cardio_detail": { "duration": 105, "distance": 6.0 }
+        "cardio_detail": { "duration": 105, "distance": 6.0, "pace": 17.5 }
+      }
+    ]
+  },
+  {
+    "user_id": 1,
+    "date": "2025-05-18",
+    "raw_text": "Rest day.",
+    "notes": "Active recovery and stretching.",
+    "entries": []
+  },
+  {
+    "user_id": 1,
+    "date": "2025-05-19",
+    "raw_text": "Ran 3 miles in 27 minutes. Pushups and situps again.",
+    "notes": "Tight hamstrings. Recovery pace.",
+    "entries": [
+      {
+        "type": "cardio",
+        "exercise": "running",
+        "notes": "Easier pace, still sweating by the end.",
+        "cardio_detail": { "duration": 27, "distance": 3.0, "pace": 9.0 }
+      },
+      {
+        "type": "strength",
+        "exercise": "pushups",
+        "notes": "Form sharp.",
+        "strength_entries": [
+          { "set_number": 1, "reps": 20, "weight": null },
+          { "set_number": 2, "reps": 20, "weight": null }
+        ]
+      },
+      {
+        "type": "strength",
+        "exercise": "situps",
+        "notes": "Quick finish to the day.",
+        "strength_entries": [
+          { "set_number": 1, "reps": 20, "weight": null },
+          { "set_number": 2, "reps": 20, "weight": null }
+        ]
+      }
+    ]
+  },
+  {
+    "user_id": 1,
+    "date": "2025-05-20",
+    "raw_text": "Rowed 4 miles in 34 minutes. 3x12 dumbbell presses.",
+    "notes": "Improved power on rower. Shoulders fatigued after presses.",
+    "entries": [
+      {
+        "type": "cardio",
+        "exercise": "rowing",
+        "notes": "More aggressive stroke pace.",
+        "cardio_detail": { "duration": 34, "distance": 4.0, "pace": 8.5 }
+      },
+      {
+        "type": "strength",
+        "exercise": "dumbbell press",
+        "notes": "Fatigue set in quicker today.",
+        "strength_entries": [
+          { "set_number": 1, "reps": 12, "weight": 40 },
+          { "set_number": 2, "reps": 12, "weight": 40 },
+          { "set_number": 3, "reps": 12, "weight": 40 }
+        ]
+      }
+    ]
+  },
+  {
+    "user_id": 1,
+    "date": "2025-05-21",
+    "raw_text": "Did 4x6 squats at 190 lbs. Followed by hanging leg raises and calf raises.",
+    "notes": "Heavy squat day. Great session.",
+    "entries": [
+      {
+        "type": "strength",
+        "exercise": "squat",
+        "notes": "Depth better. Core engaged.",
+        "strength_entries": [
+          { "set_number": 1, "reps": 6, "weight": 190 },
+          { "set_number": 2, "reps": 6, "weight": 190 },
+          { "set_number": 3, "reps": 6, "weight": 190 },
+          { "set_number": 4, "reps": 6, "weight": 190 }
+        ]
+      },
+      {
+        "type": "strength",
+        "exercise": "hanging leg raise",
+        "notes": "Grip held strong today.",
+        "strength_entries": [
+          { "set_number": 1, "reps": 10, "weight": null },
+          { "set_number": 2, "reps": 10, "weight": null },
+          { "set_number": 3, "reps": 10, "weight": null }
+        ]
+      },
+      {
+        "type": "strength",
+        "exercise": "calf raise",
+        "notes": "Deep burn again.",
+        "strength_entries": [
+          { "set_number": 1, "reps": 15, "weight": null },
+          { "set_number": 2, "reps": 15, "weight": null },
+          { "set_number": 3, "reps": 15, "weight": null }
+        ]
       }
     ]
   }

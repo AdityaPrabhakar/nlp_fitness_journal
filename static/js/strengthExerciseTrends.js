@@ -11,6 +11,8 @@ const select = document.getElementById("exerciseSelect");
 const startDateInput = document.getElementById("startDate");
 const endDateInput = document.getElementById("endDate");
 
+let aiRequestToken = 0; // Used to cancel stale AI requests
+
 // Load only strength exercises
 async function loadExercises() {
   try {
@@ -49,6 +51,9 @@ select.addEventListener("change", async () => {
   if (startDate) params.append("start_date", startDate);
   if (endDate) params.append("end_date", endDate);
 
+  // Generate a token for this selection to prevent stale insight rendering
+  const currentToken = ++aiRequestToken;
+
   try {
     const rmRes = await authFetch(`/api/exercise-data/strength/1rm-trend/${encodeURIComponent(exercise)}?${params}`);
     const rmData = await rmRes.json();
@@ -71,7 +76,7 @@ select.addEventListener("change", async () => {
 
       const latestPRs = prData.personal_records.filter(pr => pr.is_latest);
       const highlightContainer = document.getElementById("latestPrHighlight");
-      highlightContainer.innerHTML = ""; // Clear previous content
+      highlightContainer.innerHTML = "";
 
       if (latestPRs.length > 0) {
         latestPRs.forEach(pr => {
@@ -105,7 +110,11 @@ select.addEventListener("change", async () => {
     showLoadingAiInsights();
     const aiRes = await authFetch(`/api/exercise-data/strength/ai-insights/${encodeURIComponent(exercise)}?${params}`);
     const aiData = await aiRes.json();
-    renderAiInsights(aiData);
+
+    // Only render if token still matches (i.e., not outdated)
+    if (currentToken === aiRequestToken) {
+      renderAiInsights(aiData);
+    }
 
   } catch (err) {
     console.error("[trend fetch] Failed:", err);

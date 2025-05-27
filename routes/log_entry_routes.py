@@ -30,6 +30,7 @@ def log_workout():
         notes = structured_response.get("notes", "")
         parsed_date = structured_response.get("date")
         cleaned_entries = clean_entries(entries)
+        print(cleaned_entries)
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 

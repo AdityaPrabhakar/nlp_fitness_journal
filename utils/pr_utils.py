@@ -29,6 +29,7 @@ def track_prs_for_session(session, entries):
         elif entry_type == "cardio":
             distance = entry.get("distance")
             duration = entry.get("duration")
+            pace = entry.get("pace")
 
             if distance:
                 new_pr = update_pr_record(user_id, exercise, "cardio", "distance", distance, session.id, "mi")
@@ -40,9 +41,8 @@ def track_prs_for_session(session, entries):
                 if new_pr:
                     new_prs.append(new_pr)
 
-            if distance and duration and distance > 0:
-                pace = duration / distance  # ⬅️ CHANGED from distance / duration
-                new_pr = update_pr_record(user_id, exercise, "cardio", "pace", pace, session.id, "min/mi")  # ⬅️ Updated units
+            if pace:
+                new_pr = update_pr_record(user_id, exercise, "cardio", "pace", pace, session.id, "min/mi")
                 if new_pr:
                     new_prs.append(new_pr)
 
@@ -114,19 +114,17 @@ def update_pr_record(user_id, exercise, type_, field, current_value, current_ses
             )
         elif field == "pace":
             query = (
-                db.session.query((CardioEntry.duration / CardioEntry.distance).label("pace"), WorkoutEntry.session_id)
+                db.session.query(CardioEntry.pace, WorkoutEntry.session_id)
                 .join(WorkoutEntry, CardioEntry.entry_id == WorkoutEntry.id)
                 .join(WorkoutSession, WorkoutEntry.session_id == WorkoutSession.id)
                 .filter(
                     WorkoutEntry.exercise == exercise,
-                    CardioEntry.distance != None,
-                    CardioEntry.duration != None,
-                    CardioEntry.distance > 0,  # ⬅️ Was duration > 0
+                    CardioEntry.pace != None,
                     WorkoutSession.user_id == user_id
                 )
-                .order_by((CardioEntry.duration / CardioEntry.distance).asc())  # ⬅️ Ascending = better pace
+                .order_by(CardioEntry.pace.asc())  # lower pace = better
             )
-        else:
+    else:
             return None
 
     top_record = query.first()

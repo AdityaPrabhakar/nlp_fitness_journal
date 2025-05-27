@@ -43,6 +43,9 @@ def parse_workout(text):
     For cardio, include:
     - "duration": numeric value only (in minutes)
     - "distance": numeric value only (in miles)
+    - "pace": optional, if mentioned (in minutes per mile)
+
+    
 
     ### Normalization:
     - Normalize common exercise name typos and variations.
@@ -102,17 +105,37 @@ def parse_workout(text):
     content = response.choices[0].message.content
     return json.loads(content)
 
-
 def clean_entry(entry):
     """Fixes and enriches a single workout entry."""
-    if 'reps' in entry and ('sets' not in entry or not entry['sets']):
-        entry['sets'] = 1
+    entry_type = entry.get('type')
 
-    # Calculate volume if applicable
-    if 'reps' in entry and 'sets' in entry:
-        entry['volume'] = entry['reps'] * entry['sets']
+    if entry_type == 'strength':
+        # Default sets = 1 if reps are present but sets missing
+        if 'reps' in entry and ('sets' not in entry or not entry['sets']):
+            entry['sets'] = 1
+
+        # Calculate volume
+        if 'reps' in entry and 'sets' in entry:
+            entry['volume'] = entry['reps'] * entry['sets']
+
+    elif entry_type == 'cardio':
+        # Infer pace if distance and duration are provided
+        distance = entry.get("distance")
+        duration = entry.get("duration")
+
+        if distance and duration and distance > 0:
+            entry["pace"] = duration / distance  # pace in min/mi or min/km
+
+        # You could also infer duration if pace and distance are known
+        if "pace" in entry and not entry.get("duration") and distance:
+            entry["duration"] = entry["pace"] * distance
+
+        # Or infer distance if duration and pace are known
+        if "pace" in entry and not entry.get("distance") and duration:
+            entry["distance"] = duration / entry["pace"]
 
     return entry
+
 
 
 def clean_entries(entries):

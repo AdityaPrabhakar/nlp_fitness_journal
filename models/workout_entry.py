@@ -38,7 +38,8 @@ class WorkoutEntry(db.Model):
             cardio = CardioEntry(
                 entry_id=entry.id,
                 duration=data.get("duration"),
-                distance=data.get("distance")
+                distance=data.get("distance"),
+                pace=data.get("pace")
             )
             db.session.add(cardio)
 

@@ -53,12 +53,12 @@ export async function renderCardioDetailedSessionsChart(exercise, startDate, end
 
           const distance = entry.distance ?? 0;
           const duration = entry.duration ?? 0;
+          const pace = entry.pace ?? null;
+
           distanceData.push(distance);
           durationData.push(duration);
-
-          // Compute pace only if both values are positive
-          const pace = (distance > 0 && duration > 0) ? (duration / distance) : null;
           paceData.push(pace);
+
         }
       });
     });

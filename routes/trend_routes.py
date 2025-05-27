@@ -110,14 +110,15 @@ def workout_trends(session_id):
         elif entry.type == 'cardio':
             cardio = CardioEntry.query.filter_by(entry_id=entry.id).first()
             if cardio:
-                pace = round(cardio.duration / cardio.distance, 2) if cardio.distance and cardio.duration and cardio.distance != 0 else None
+                pace = cardio.pace  # Use stored pace
 
                 historical_query = (
                     db.session.query(
                         WorkoutSession.date,
                         WorkoutEntry.notes,
                         CardioEntry.distance,
-                        CardioEntry.duration
+                        CardioEntry.duration,
+                        CardioEntry.pace  # Include pace from schema
                     )
                     .join(WorkoutEntry, WorkoutEntry.session_id == WorkoutSession.id)
                     .join(CardioEntry, CardioEntry.entry_id == WorkoutEntry.id)
@@ -142,12 +143,12 @@ def workout_trends(session_id):
                 historical_cardio = historical_query.all()
 
                 grouped_history = {}
-                for date, notes, distance, duration in historical_cardio:
+                for date, notes, distance, duration, hist_pace in historical_cardio:
                     key = (date.format(), notes or "")
                     grouped_history[key] = {
                         "distance": distance,
                         "duration": duration,
-                        "pace": round(duration / distance, 2) if distance and duration else None
+                        "pace": hist_pace  # Use stored pace
                     }
 
                 cardio_history = [

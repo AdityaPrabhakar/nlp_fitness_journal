@@ -9,6 +9,11 @@ from flask import current_app
 # Load environment variables from .env file
 load_dotenv()
 
+def calculate_pace(duration_minutes, distance):
+    if duration_minutes and distance and distance > 0:
+        return round(duration_minutes / distance, 2)
+    return None
+
 def seed_test_data():
     app = create_app(TestingConfig)
 
@@ -76,10 +81,18 @@ def seed_test_data():
                         db.session.add(strength_set)
 
                 elif entry.type == "cardio":
+                    cardio_detail = entry_data.get("cardio_detail", {})
+                    duration = cardio_detail.get("duration")  # in minutes
+                    distance = cardio_detail.get("distance")  # in miles/km
+                    pace = cardio_detail.get("pace")  # Optional, fallback to calculated
+                    if pace is None:
+                        pace = calculate_pace(duration, distance)
+
                     cardio = CardioEntry(
                         entry_id=entry.id,
-                        duration=entry_data.get("cardio_detail", {}).get("duration"),
-                        distance=entry_data.get("cardio_detail", {}).get("distance")
+                        duration=duration,
+                        distance=distance,
+                        pace=pace
                     )
                     db.session.add(cardio)
 
