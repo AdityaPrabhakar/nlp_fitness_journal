@@ -33,7 +33,7 @@ export function renderSessionDetails(data) {
         class="absolute top-2 right-2 text-sm text-blue-600 hover:underline"
         data-edit-journal
         data-session-id="${data.id}" 
-        data-raw-text='${JSON.stringify(data.raw_text)}'
+        data-raw-text="${encodeURIComponent(data.raw_text)}"
       >
         Edit
       </button>

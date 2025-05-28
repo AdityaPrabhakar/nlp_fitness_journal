@@ -53,28 +53,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('entryText').value = '';
         console.log('[Workout] Entry logged successfully.');
 
-        if (!result.session_id) {
-          // No workout session created
-          let modalContent;
-          console.log('goals added:', result.goals_added)
-          if (result.goals_added > 0) {
-            modalContent = `
-              <div class="p-4 space-y-6 text-center">
-                <h2 class="text-2xl font-bold">Goals Logged ✅</h2>
-                <p class="text-gray-600 text-lg">Your goals were recorded successfully.</p>
-              </div>
-            `;
-          } else {
-            // No goals logged either — assume goal already exists
-            modalContent = `
-              <div class="p-4 space-y-6 text-center">
-                <h2 class="text-2xl font-bold">Goal Already Exists</h2>
-                <p class="text-gray-600 text-lg">You’ve already logged this goal. Try editing it if you’d like to change the target.</p>
-              </div>
-            `;
-          }
-
-          openModal(modalContent, { title: 'Goals', size: 'md' });
+        if (
+          !result.session_id &&
+          (!result.goals || result.goals.length === 0) &&
+          (!result.repeated_goals || result.repeated_goals.length === 0)
+        ) {
+          const modalContent = `
+            <div class="p-4 space-y-6 text-center">
+              <h2 class="text-2xl font-bold">No Workout Logged</h2>
+              <p class="text-gray-600 text-lg">No workout session or goals were created. Please make sure your entry includes valid workout or goal details.</p>
+            </div>
+          `;
+          openModal(modalContent, { title: 'No Entry Detected', size: 'md' });
           return;
         }
 
@@ -97,36 +87,111 @@ document.addEventListener('DOMContentLoaded', () => {
           `
           : '';
 
-        const trendUrl = `/api/workout-trends/${sessionId}?date=${encodeURIComponent(sessionDate)}&count=5`;
-        console.log('[API] Fetching workout trend data from:', trendUrl);
-        const trendRes = await authFetch(trendUrl);
-        const trendData = await trendRes.json();
-        console.log('[API] Received trend data:', trendData);
+        const goalsHtml = result.goals?.length
+          ? `
+            <div class="bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-4 transition-all duration-500 ease-out">
+              <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">
+                <span>🎯 New Goals Logged</span>
+              </h3>
+              <ul class="space-y-3">
+                ${result.goals.map(goal => `
+                  <li class="flex items-start gap-2">
+                    <span class="text-xl">🎯</span>
+                    <div>
+                      <div class="font-semibold">${goal.exercise_name || goal.name}</div>
+                      ${goal.description ? `<div class="text-sm text-gray-700">${goal.description}</div>` : ''}
+                      ${goal.goal_type ? `<div class="text-sm text-gray-600 mt-1">Type: ${goal.goal_type}</div>` : ''}
+                      ${goal.targets?.length ? `
+                        <ul class="ml-4 mt-1 list-disc list-inside text-sm text-blue-900 space-y-1">
+                          ${goal.targets.map(t => `<li>${t.target_metric}: ${t.target_value}</li>`).join('')}
+                        </ul>
+                      ` : ''}
+                      ${goal.end_date ? `
+                        <div class="text-xs text-gray-500 mt-1">Ends: ${goal.end_date}</div>
+                      ` : ''}
+                    </div>
+                  </li>
+                `).join('')}
+              </ul>
+              ${
+                result.repeated_goals?.length
+                  ? `<p class="mt-4 text-sm text-gray-600 italic">⚠️ ${result.repeated_goals.length} goal(s) were already logged and skipped.</p>`
+                  : ''
+              }
+            </div>
+          `
+          : result.repeated_goals?.length
+            ? `
+              <div class="bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-lg p-4 transition-all duration-500 ease-out">
+                <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">
+                  <span>⚠️ Repeated Goals Skipped</span>
+                </h3>
+                <ul class="space-y-3">
+                  ${result.repeated_goals.map(goal => `
+                    <li class="flex items-start gap-2">
+                      <span class="text-xl">🎯</span>
+                      <div>
+                        <div class="font-semibold">${goal.exercise_name || goal.name}</div>
+                        ${goal.description ? `<div class="text-sm text-gray-700">${goal.description}</div>` : ''}
+                        ${goal.goal_type ? `<div class="text-sm text-gray-600 mt-1">Type: ${goal.goal_type}</div>` : ''}
+                        ${goal.targets?.length ? `
+                          <ul class="ml-4 mt-1 list-disc list-inside text-sm text-yellow-900 space-y-1">
+                            ${goal.targets.map(t => `<li>${t.target_metric}: ${t.target_value}</li>`).join('')}
+                          </ul>
+                        ` : ''}
+                        ${goal.end_date ? `
+                          <div class="text-xs text-gray-500 mt-1">Ends: ${goal.end_date}</div>
+                        ` : ''}
+                      </div>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            `
+            : '';
+
+        let trendData = null;
+        if (sessionId) {
+          const trendUrl = `/api/workout-trends/${sessionId}?date=${encodeURIComponent(sessionDate)}&count=5`;
+          console.log('[API] Fetching workout trend data from:', trendUrl);
+          const trendRes = await authFetch(trendUrl);
+          trendData = await trendRes.json();
+          console.log('[API] Received trend data:', trendData);
+        }
 
         const modalContent = `
           <div class="p-4 space-y-6">
             <h2 class="text-2xl font-bold text-center">Journal Entry Created! 🥳</h2>
             ${prHtml}
-            <p class="text-gray-600 text-lg text-center">Workout Summary</p>
-            <div id="trend-tabs" class="mb-4 flex space-x-2 border-b"></div>
-            <div id="trend-container" class="mt-4"></div>
+            ${goalsHtml}
+            ${
+              sessionId
+                ? `
+                <p class="text-gray-600 text-lg text-center">Workout Summary</p>
+                <div id="trend-tabs" class="mb-4 flex space-x-2 border-b"></div>
+                <div id="trend-container" class="mt-4"></div>
+                `
+                : ''
+            }
           </div>
         `;
 
         console.log('[Modal] Replacing loading modal with summary modal...');
         openModal(modalContent, { title: 'Workout Summary', size: 'xl' });
 
-        setTimeout(() => {
-          console.log('[Chart] Rendering trend charts...');
-          renderTrendCharts(trendData);
-        }, 100);
+        if (trendData) {
+          setTimeout(() => {
+            console.log('[Chart] Rendering trend charts...');
+            renderTrendCharts(trendData);
+          }, 100);
+        }
       } else {
         console.error('[Error] Workout log failed:', result.error);
         alert("Error logging workout: " + (result.error || "Unknown error"));
       }
     } catch (err) {
       console.error("[Exception] Log form error:", err);
-      alert("Failed to log workout. Can you ensure that input is a valid set of workout entries or workout goals?");
+      alert("Failed to log workout. Please ensure your input contains valid workout entries.");
     }
   });
 });

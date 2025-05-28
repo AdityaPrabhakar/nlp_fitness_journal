@@ -4,6 +4,7 @@ from datetime import date
 
 client = OpenAI()
 
+
 # noinspection PyTypeChecker
 def parse_workout_and_goals(text):
     today = date.today().isoformat()
@@ -41,8 +42,6 @@ Each goal must include:
 - "start_date": ISO format string
 - "end_date": optional ISO string (for longer goals)
 - "goal_type": one of: "single_session" or "aggregate"
-- "is_repeatable": true or false
-- "repeat_interval": optional if is_repeatable is true (values: "daily", "weekly", "monthly", "yearly")
 - "exercise_type": one of: "strength", "cardio", "general"
 - "exercise_name": optional, e.g. "bench press"
 - "targets": list of objects, each with:
@@ -55,6 +54,14 @@ Example:
   {{ "target_metric": "reps", "target_value": 5 }}
 ]
 
+### Goal Type Guidelines:
+- If a goal mentions repeating something "daily", "weekly", or similar, assume it means "in one day" or "in one week".
+- Default to `goal_type: "single_session"` unless **one of the following is clearly true**:
+  - The user explicitly states a **total or combined amount over time** using words like “total”, “combined”, or equivalent EXPLICITLY.
+  - The goal is **general or schedule-based**, such as “do cardio 5 times” or “work out 3 days a week”.
+- Use `goal_type: "aggregate"` only for cumulative goals across multiple sessions, and only when the user makes this intent clear through specific language.
+- Use `exercise_type: "general"` for non-exercise-specific goals such as “stay active every day” or “train 4 times a week”.
+
 ### Normalization Rules:
 - Convert all distances to miles (1 km = 0.621371 miles)
 - Convert all weights to pounds (1 kg = 2.20462 lbs)
@@ -64,7 +71,6 @@ Example:
 
 ### Rules:
 - Do NOT include goals inside the "entries" section
-- Use "general" type for mindset goals like "train every week"
 - Only include keys that are relevant — do not include null or empty values
 - Do NOT guess "date" unless explicitly mentioned
 - Do NOT output extra explanation, only valid parsable JSON
@@ -97,23 +103,22 @@ Example:
       "description": "Try 225 lbs bench press next week",
       "start_date": "2024-05-18",
       "goal_type": "single_session",
-      "is_repeatable": false,
       "exercise_type": "strength",
       "exercise_name": "bench press",
-      "target_metric": "weight",
-      "target_value": 225
+      "targets": [
+        {{ "target_metric": "weight", "target_value": 225 }}
+      ]
     }},
     {{
-      "name": "Run weekly",
+      "name": "Run 10 miles this week",
       "description": "Run at least 10 miles per week",
       "start_date": "2024-05-13",
       "goal_type": "aggregate",
-      "is_repeatable": true,
-      "repeat_interval": "weekly",
       "exercise_type": "cardio",
       "exercise_name": "running",
-      "target_metric": "distance",
-      "target_value": 10
+      "targets": [
+        {{ "target_metric": "distance", "target_value": 10 }}
+      ]
     }}
   ]
 }}
@@ -139,6 +144,7 @@ Example:
 
     content = response.choices[0].message.content
     return json.loads(content)
+
 
 
 def clean_entry(entry):

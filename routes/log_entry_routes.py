@@ -38,7 +38,8 @@ def log_workout():
         return jsonify({"success": False, "error": str(e)}), 400
 
     session = None
-    goals_added = 0
+    added_goals = []
+    repeated_goals = []
 
     if cleaned_entries:
         session = WorkoutSession(
@@ -58,12 +59,9 @@ def log_workout():
 
     for goal in goals:
         try:
-            # Parse base fields
             start_date = datetime.strptime(goal["start_date"], "%Y-%m-%d").date()
             end_date = datetime.strptime(goal["end_date"], "%Y-%m-%d").date() if goal.get("end_date") else None
             goal_type = GoalTypeEnum(goal["goal_type"])
-            is_repeatable = goal.get("is_repeatable", False)
-            repeat_interval = RepeatIntervalEnum(goal["repeat_interval"]) if goal.get("repeat_interval") else None
             exercise_type = ExerciseTypeEnum(goal["exercise_type"]) if goal.get("exercise_type") else None
             exercise_name = goal.get("exercise_name")
             targets = goal.get("targets", {})
@@ -75,15 +73,12 @@ def log_workout():
                 if not isinstance(target, dict) or "target_metric" not in target or "target_value" not in target:
                     raise ValueError("Each target must include 'target_metric' and 'target_value'.")
 
-            # Check for duplicate by base fields
             existing_goals = Goal.query.filter(
                 and_(
                     Goal.user_id == user_id,
                     Goal.start_date == start_date,
                     Goal.end_date == end_date,
                     Goal.goal_type == goal_type,
-                    Goal.is_repeatable == is_repeatable,
-                    Goal.repeat_interval == repeat_interval,
                     Goal.exercise_type == exercise_type,
                     Goal.exercise_name == exercise_name,
                 )
@@ -97,12 +92,27 @@ def log_workout():
                 }
                 if existing_targets == incoming_targets:
                     is_duplicate = True
+
+                    repeated_goals.append({
+                        "id": g.id,
+                        "name": g.name,
+                        "description": g.description,
+                        "start_date": g.start_date.isoformat(),
+                        "end_date": g.end_date.isoformat() if g.end_date else None,
+                        "goal_type": g.goal_type.value,
+                        "exercise_type": g.exercise_type.value if g.exercise_type else None,
+                        "exercise_name": g.exercise_name,
+                        "targets": [
+                            {"target_metric": t.metric.value, "target_value": t.value}
+                            for t in g.targets
+                        ]
+                    })
+
                     break
 
             if is_duplicate:
-                continue  # Skip duplicate
+                continue
 
-            # Create goal
             goal_obj = Goal(
                 user_id=user_id,
                 name=goal.get("name", f"{goal_type.value.capitalize()} goal for {exercise_name or 'general'}"),
@@ -110,26 +120,37 @@ def log_workout():
                 start_date=start_date,
                 end_date=end_date,
                 goal_type=goal_type,
-                is_repeatable=is_repeatable,
-                repeat_interval=repeat_interval,
                 exercise_type=exercise_type,
                 exercise_name=exercise_name,
                 created_at=datetime.utcnow(),
             )
 
             for target in targets:
-                metric_str = target["target_metric"]
-                value = target["target_value"]
-                metric_enum = MetricEnum(metric_str)
-                goal_obj.targets.append(GoalTarget(metric=metric_enum, value=float(value)))
+                metric_enum = MetricEnum(target["target_metric"])
+                goal_obj.targets.append(GoalTarget(metric=metric_enum, value=float(target["target_value"])))
 
             db.session.add(goal_obj)
-            goals_added += 1
+            db.session.flush()  # Get ID before commit
+
+            added_goals.append({
+                "id": goal_obj.id,
+                "name": goal_obj.name,
+                "description": goal_obj.description,
+                "start_date": goal_obj.start_date.isoformat(),
+                "end_date": goal_obj.end_date.isoformat() if goal_obj.end_date else None,
+                "goal_type": goal_obj.goal_type.value,
+                "exercise_type": goal_obj.exercise_type.value if goal_obj.exercise_type else None,
+                "exercise_name": goal_obj.exercise_name,
+                "targets": [
+                    {"target_metric": t.metric.value, "target_value": t.value}
+                    for t in goal_obj.targets
+                ]
+            })
 
         except Exception as e:
             print(f"Error processing goal: {goal} — {e}")
 
-    if goals_added:
+    if added_goals:
         db.session.commit()
 
     return jsonify({
@@ -138,8 +159,12 @@ def log_workout():
         "session_id": session.id if session else None,
         "session_date": session.date.format() if session else None,
         "new_prs": new_prs,
-        "goals_added": goals_added
+        "goals_added": len(added_goals),
+        "goals": added_goals,
+        "repeated_goals": repeated_goals
     }), 201
+
+
 
 
 @log_entry_bp.route("/api/edit-workout/<int:session_id>", methods=["POST"])
@@ -192,7 +217,12 @@ def edit_workout(session_id):
         if parsed_date:
             session.date = parsed_date
 
+        # 💥 Clear old PRs before re-tracking
+        PersonalRecord.query.filter_by(session_id=session.id).delete(synchronize_session=False)
+
         db.session.flush()
+
+        # Recompute PRs based on new entries
         new_prs = track_prs_for_session(session, cleaned_entries)
 
         db.session.commit()

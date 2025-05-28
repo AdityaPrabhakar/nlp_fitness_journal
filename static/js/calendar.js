@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('button[data-edit-journal]');
     if (btn) {
       const sessionId = btn.getAttribute('data-session-id');
-      const rawText = JSON.parse(btn.getAttribute('data-raw-text'));
+      const rawText = decodeURIComponent(btn.getAttribute('data-raw-text'));
 
       const editModalHtml = `
         <div class="p-4">

@@ -53,8 +53,6 @@ class Goal(db.Model):
     end_date = Column(Date)
 
     goal_type = Column(Enum(GoalTypeEnum), nullable=False)
-    is_repeatable = Column(Boolean, default=False)
-    repeat_interval = Column(Enum(RepeatIntervalEnum), nullable=True)
 
     exercise_type = Column(Enum(ExerciseTypeEnum), nullable=True)
     exercise_name = Column(String, nullable=True)
