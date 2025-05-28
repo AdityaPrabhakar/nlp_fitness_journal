@@ -92,7 +92,9 @@ def log_workout():
             is_duplicate = False
             for g in existing_goals:
                 existing_targets = {(t.metric.value, t.value) for t in g.targets}
-                incoming_targets = {(k, float(v)) for k, v in targets.items()}
+                incoming_targets = {
+                    (t["target_metric"], float(t["target_value"])) for t in targets
+                }
                 if existing_targets == incoming_targets:
                     is_duplicate = True
                     break
@@ -157,9 +159,19 @@ def edit_workout(session_id):
     try:
         structured_response = parse_workout_and_goals(raw_text)
         entries = structured_response.get("entries", [])
+        goals = structured_response.get("goals", [])
         notes = structured_response.get("notes", "")
         parsed_date = structured_response.get("date")
+
+        # Reject if user submitted only goals and no workout entries
+        if goals and not entries:
+            return jsonify({
+                "success": False,
+                "error": "This entry appears to contain only goals. Please log goals in the Goals section, not the workout journal."
+            }), 400
+
         cleaned_entries = clean_entries(entries)
+
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
@@ -195,4 +207,3 @@ def edit_workout(session_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
-

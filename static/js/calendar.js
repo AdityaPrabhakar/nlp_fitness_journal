@@ -124,7 +124,12 @@ document.addEventListener('click', async (e) => {
         body: JSON.stringify({ raw_text: newText })
       });
 
-      if (!res.ok) throw new Error('Failed to update workout');
+      const data = await res.json();
+
+      if (!res.ok) {
+        const errorMsg = data?.error || 'Failed to update workout.';
+        throw new Error(errorMsg);
+      }
 
       // Re-fetch updated session data
       lastSessionDetails = await Promise.all(
@@ -148,7 +153,7 @@ document.addEventListener('click', async (e) => {
       openModal(content, { size: 'xl' });
     } catch (err) {
       console.error('Error saving journal entry:', err);
-      alert('Failed to update workout journal.');
+      alert('Failed to save journal entry. Can you ensure that input is a valid set of workout entries?');
     }
   }
 });

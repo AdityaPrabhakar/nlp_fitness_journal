@@ -51,7 +51,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (response.ok && result.success) {
         document.getElementById('entryText').value = '';
-        console.log('[Workout] Workout logged successfully.');
+        console.log('[Workout] Entry logged successfully.');
+
+        if (!result.session_id) {
+          // No workout session created
+          let modalContent;
+          console.log('goals added:', result.goals_added)
+          if (result.goals_added > 0) {
+            modalContent = `
+              <div class="p-4 space-y-6 text-center">
+                <h2 class="text-2xl font-bold">Goals Logged ✅</h2>
+                <p class="text-gray-600 text-lg">Your goals were recorded successfully.</p>
+              </div>
+            `;
+          } else {
+            // No goals logged either — assume goal already exists
+            modalContent = `
+              <div class="p-4 space-y-6 text-center">
+                <h2 class="text-2xl font-bold">Goal Already Exists</h2>
+                <p class="text-gray-600 text-lg">You’ve already logged this goal. Try editing it if you’d like to change the target.</p>
+              </div>
+            `;
+          }
+
+          openModal(modalContent, { title: 'Goals', size: 'md' });
+          return;
+        }
 
         const sessionId = result.session_id;
         const sessionDate = result.session_date;
@@ -101,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err) {
       console.error("[Exception] Log form error:", err);
-      alert("Failed to log workout.");
+      alert("Failed to log workout. Can you ensure that input is a valid set of workout entries or workout goals?");
     }
   });
 });
