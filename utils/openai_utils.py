@@ -5,105 +5,141 @@ from datetime import date
 client = OpenAI()
 
 # noinspection PyTypeChecker
-def parse_workout(text):
+def parse_workout_and_goals(text):
     today = date.today().isoformat()
 
     prompt = f"""
-    You are a fitness assistant. A user will describe their workout in natural language.
-    Convert it into a strict JSON object with only the fields needed, using **American units only**.
+You are a fitness assistant. A user will describe their workout and goals in natural language.
+Convert it into a strict JSON object that matches the required schema. Use **American units only**.
 
-    ### Context:
-    Today's date is {today}. Use this to resolve any relative dates like "yesterday", "last week", "on Monday", etc.
+### Context:
+Today's date is {today}. Use this to resolve relative time expressions like "yesterday", "next week", "starting Monday", etc.
 
-    ### Units Standardization Rules:
-    - All distances must be in **miles**. Convert from kilometers (1 km = 0.621371 miles).
-    - All weights must be in **pounds (lbs)**. Convert from kilograms (1 kg = 2.20462 lbs).
-    - All durations should be in **minutes**. Handle terms like "half an hour" as 30.
-    - If no units are provided (e.g. "ran 2"), assume American units (e.g., miles for distance, lbs for weight).
-    - Strip all units in the final output and return numeric values only.
+### Required Output Format:
+Return a dictionary with the following keys:
+- "date": ISO format (YYYY-MM-DD), only if the text includes a specific or relative date
+- "entries": list of past workout entries
+- "notes": general string (can be empty)
+- "goals": list of structured goals (see schema below)
 
-    ### Required JSON structure:
-    Always return a dictionary with the following keys:
-    - "date": ISO format date string (YYYY-MM-DD), **only if a specific or relative date is mentioned** in the text
-    - "entries": a list of workout items
-    - "notes": a general string (can be empty if nothing general to say)
+### Workout Entry Format:
+Each entry must include:
+- "type": "strength", "cardio", or another
+- "exercise": normalized name (e.g. "bench press", "running")
+- "notes": optional per-exercise notes
+- For strength:
+  - "sets_details": list of sets with "set_number", "reps", and "weight" (numeric, lbs only)
+- For cardio:
+  - "duration": in minutes
+  - "distance": in miles
+  - "pace": optional (minutes per mile)
 
-    ### Entry format:
-    Each workout entry must have:
-    - "type": either "strength", "cardio", or another clearly inferred category
-    - "exercise": name of the exercise (e.g. "bench press")
-    - "notes": per-exercise notes if provided (optional)
+### Goal Format (match this SQL schema exactly):
+Each goal must include:
+- "name": short title like "Bench 225" or "Run 10 miles"
+- "description": detailed description (optional)
+- "start_date": ISO format string
+- "end_date": optional ISO string (for longer goals)
+- "goal_type": one of: "single_session" or "aggregate"
+- "is_repeatable": true or false
+- "repeat_interval": optional if is_repeatable is true (values: "daily", "weekly", "monthly", "yearly")
+- "exercise_type": one of: "strength", "cardio", "general"
+- "exercise_name": optional, e.g. "bench press"
+- "targets": list of objects, each with:
+  - "target_metric": one of: "reps", "sets", "distance", "duration", "weight", "sessions", "pace"
+  - "target_value": numeric only (American units)
 
-    For strength training, include:
-    - "sets_details": a list of sets, each with:
-        - "set_number": the set index (1-based)
-        - "reps": number of reps (if not mentioned, omit or set to null)
-        - "weight": numeric value only (standardized to pounds)
+Example:
+"targets": [
+  {{ "target_metric": "weight", "target_value": 225 }},
+  {{ "target_metric": "reps", "target_value": 5 }}
+]
 
-    For cardio, include:
-    - "duration": numeric value only (in minutes)
-    - "distance": numeric value only (in miles)
-    - "pace": optional, if mentioned (in minutes per mile)
+### Normalization Rules:
+- Convert all distances to miles (1 km = 0.621371 miles)
+- Convert all weights to pounds (1 kg = 2.20462 lbs)
+- Durations must be in minutes
+- Remove units from final output
+- Normalize exercise names (e.g. "dumbell press" → "dumbbell press", "benchpress" → "bench press", "pushups" → "push-ups")
 
-    
+### Rules:
+- Do NOT include goals inside the "entries" section
+- Use "general" type for mindset goals like "train every week"
+- Only include keys that are relevant — do not include null or empty values
+- Do NOT guess "date" unless explicitly mentioned
+- Do NOT output extra explanation, only valid parsable JSON
 
-    ### Normalization:
-    - Normalize common exercise name typos and variations.
-      For example:
-        - "dumbell press" → "dumbbell press"
-        - "benchpress" → "bench press"
-        - "pushups" → "push-ups"
-        - "dead lift" → "deadlift"
-        - Ensure consistency across entries even with different spellings.
+### Example Output:
 
-    ### Example output:
-
+{{
+  "date": "2024-05-11",
+  "entries": [
     {{
-      "date": "2024-05-11",
-      "entries": [
-        {{
-          "type": "strength",
-          "exercise": "bench press",
-          "sets_details": [
-            {{ "set_number": 1, "reps": 8, "weight": 135 }},
-            {{ "set_number": 2, "reps": 6, "weight": 155 }}
-          ],
-          "notes": "Felt strong"
-        }},
-        {{
-          "type": "cardio",
-          "exercise": "running",
-          "duration": 30,
-          "distance": 3.1
-        }}
+      "type": "strength",
+      "exercise": "bench press",
+      "sets_details": [
+        {{ "set_number": 1, "reps": 8, "weight": 135 }},
+        {{ "set_number": 2, "reps": 6, "weight": 155 }}
       ],
-      "notes": "Solid training day."
+      "notes": "felt strong"
+    }},
+    {{
+      "type": "cardio",
+      "exercise": "running",
+      "duration": 30,
+      "distance": 3.1
     }}
+  ],
+  "notes": "solid day",
+  "goals": [
+    {{
+      "name": "Bench 225",
+      "description": "Try 225 lbs bench press next week",
+      "start_date": "2024-05-18",
+      "goal_type": "single_session",
+      "is_repeatable": false,
+      "exercise_type": "strength",
+      "exercise_name": "bench press",
+      "target_metric": "weight",
+      "target_value": 225
+    }},
+    {{
+      "name": "Run weekly",
+      "description": "Run at least 10 miles per week",
+      "start_date": "2024-05-13",
+      "goal_type": "aggregate",
+      "is_repeatable": true,
+      "repeat_interval": "weekly",
+      "exercise_type": "cardio",
+      "exercise_name": "running",
+      "target_metric": "distance",
+      "target_value": 10
+    }}
+  ]
+}}
 
-    ### Rules:
-    - Normalize common exercise name typos and variations (see above).
-    - Use the provided date context to convert relative dates into absolute ones.
-    - Only include "date" if a specific or relative date is mentioned.
-    - Do not guess a date if none is mentioned — just omit the "date" key.
-    - Always convert metric units to American units as instructed.
-    - Only include relevant keys. Do not include null, empty strings, or empty arrays.
-    - Do NOT return explanations. Only return valid, parsable JSON.
-
-    ### Input:
-    {text}
+### Input:
+{text}
     """
 
     response = client.chat.completions.create(
         model="gpt-4",
         messages=[
-            {"role": "system", "content": "You are a helpful assistant that formats workout entries into strict JSON."},
-            {"role": "user", "content": prompt}
+            {
+                "role": "system",
+                "content": "You are a helpful assistant that formats workouts and goals into strict JSON."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
         ],
         temperature=0.3
     )
 
     content = response.choices[0].message.content
     return json.loads(content)
+
 
 def clean_entry(entry):
     """Fixes and enriches a single workout entry."""

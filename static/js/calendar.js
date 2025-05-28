@@ -158,11 +158,14 @@ document.addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-view-trends]');
   if (!btn) return;
 
-  const sessionId = btn.getAttribute('data-session-id');
+  const sessionId = Number(btn.getAttribute('data-session-id'));
+  console.log('sessionId:', sessionId)
 
   try {
     const session = lastSessionDetails.find(s => s.id === sessionId);
-    const sessionDate = session?.date || new Date().toISOString().slice(0, 10);
+  console.log('session:', session);
+  console.log('session.date:', session?.date);
+  const sessionDate = session?.date?.split?.('T')?.[0] || new Date().toISOString().slice(0, 10);
     const res = await authFetch(`/api/workout-trends/${sessionId}?date=${sessionDate}&count=5`);
     const data = await res.json();
 
