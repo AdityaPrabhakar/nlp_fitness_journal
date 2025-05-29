@@ -14,6 +14,6 @@ class PersonalRecord(db.Model):
     units = db.Column(db.String, nullable=False)  # New field for units like "lbs", "reps", "mi", "min", "min/mi"
 
     session_id = db.Column(db.Integer, db.ForeignKey("workout_session.id"), nullable=False)
-    datetime = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    datetime = db.Column(db.DateTime, nullable=False, default=datetime.now)
 
     user = db.relationship("User", backref="personal_records")

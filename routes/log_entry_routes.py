@@ -5,7 +5,7 @@ from sqlalchemy import and_
 
 from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry, PersonalRecord, User
 from models.goal import Goal, GoalTypeEnum, RepeatIntervalEnum, ExerciseTypeEnum, MetricEnum, GoalTarget
-from utils import track_prs_for_session
+from utils import track_prs_for_session, evaluate_goal
 from utils.openai_utils import clean_entries, parse_workout_and_goals
 from init import db
 
@@ -152,6 +152,16 @@ def log_workout():
 
     if added_goals:
         db.session.commit()
+
+    # Fetch user goals
+    user_goals = Goal.query.filter_by(user_id=user_id).all()
+    user_sessions = WorkoutSession.query.filter_by(user_id=user_id).all()
+
+    # Evaluate all goals
+    for goal in user_goals:
+        evaluate_goal(goal, user_sessions, session)
+
+    db.session.commit()
 
     return jsonify({
         "success": True,

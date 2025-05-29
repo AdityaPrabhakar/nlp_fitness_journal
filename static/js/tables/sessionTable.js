@@ -32,7 +32,7 @@ export async function renderSessionTable(exercise, startDate, endDate) {
     `;
 
     for (const session of sessions) {
-      const date = new Date(session.date).toLocaleDateString();
+      const date = session.date;
 
       for (const entry of session.entries) {
         let details = "";

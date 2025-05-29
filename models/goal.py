@@ -82,9 +82,14 @@ class GoalProgress(db.Model):
 
     id = Column(Integer, primary_key=True)
     goal_id = Column(Integer, ForeignKey('goals.id'), nullable=False)
-    session_id = Column(Integer, ForeignKey('workout_session.id'))
+    session_id = Column(Integer, ForeignKey('workout_session.id'), nullable=True)  # Nullable for aggregate progress
 
+    # New fields
+    metric = Column(Enum(MetricEnum), nullable=False)  # Track progress per metric
     value_achieved = Column(Float, nullable=False)
+    is_complete = Column(Boolean, default=False)       # Indicates whether goal is considered "met" by this entry
+
     achieved_on = Column(Date, nullable=False, default=datetime.utcnow)
 
     goal = relationship("Goal", back_populates="progress")
+
