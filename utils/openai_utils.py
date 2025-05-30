@@ -10,121 +10,133 @@ def parse_workout_and_goals(text):
     today = date.today().isoformat()
 
     prompt = f"""
-You are a fitness assistant. A user will describe their workout and goals in natural language.
-Convert it into a strict JSON object that matches the required schema. Use **American units only**.
+    You are a fitness assistant. A user will describe their workout and goals in natural language.
+    Convert it into a strict JSON object that matches the required schema. Use **American units only**.
 
-### Context:
-Today's date is {today}. Use this to resolve relative time expressions like "yesterday", "next week", "starting Monday", etc.
+    ### Context:
+    Today's date is {today}. Use this to resolve relative time expressions like "yesterday", "next week", "starting Monday", etc.
 
-### Required Output Format:
-Return a dictionary with the following keys:
-- "date": ISO format (YYYY-MM-DD), only if the text includes a specific or relative date
-- "entries": list of past workout entries
-- "notes": general string (can be empty)
-- "goals": list of structured goals (see schema below)
+    ### Relative Time Rules:
+    - "this week" means **in one week**, starting from today
+    - "next week" means the Monday–Sunday range following this week
+    - "this month" means **in one month** starting from today
+    - Use today’s date ({today}) to compute `start_date` and `end_date`
 
-### Workout Entry Format:
-Each entry must include:
-- "type": "strength", "cardio", or another
-- "exercise": normalized name (e.g. "bench press", "running")
-- "notes": optional per-exercise notes
-- For strength:
-  - "sets_details": list of sets with "set_number", "reps", and "weight" (numeric, lbs only)
-- For cardio:
-  - "duration": in minutes
-  - "distance": in miles
-  - "pace": optional (minutes per mile)
+    ### Intent Detection Rules:
+    - Treat sentences like “I want to…”, “I plan to…”, “I aim to…”, “I'd like to…”, “My goal is…”, “I’m hoping to…” as clear goal declarations
+    - Convert any of these statements into a structured goal, even if no workout was logged
+    - Default `start_date` to today if not specified
 
-### Goal Format (match this SQL schema exactly):
-Each goal must include:
-- "name": short title like "Bench 225" or "Run 10 miles"
-- "description": detailed description (optional)
-- "start_date": ISO format string
-- "end_date": optional ISO string (for longer goals)
-- "goal_type": one of: "single_session" or "aggregate"
-- "exercise_type": one of: "strength", "cardio", "general"
-- "exercise_name": optional, e.g. "bench press"
-- "targets": list of objects, each with:
-  - "target_metric": one of: "reps", "sets", "distance", "duration", "weight", "sessions", "pace"
-  - "target_value": numeric only (American units)
+    ### Required Output Format:
+    Return a dictionary with the following keys:
+    - "date": ISO format (YYYY-MM-DD), only if the text includes a specific or relative date
+    - "entries": list of past workout entries
+    - "notes": general string (can be empty)
+    - "goals": list of structured goals (see schema below)
 
-Example:
-"targets": [
-  {{ "target_metric": "weight", "target_value": 225 }},
-  {{ "target_metric": "reps", "target_value": 5 }}
-]
+    ### Workout Entry Format:
+    Each entry must include:
+    - "type": "strength", "cardio", or another
+    - "exercise": normalized name (e.g. "bench press", "running")
+    - "notes": optional per-exercise notes
+    - For strength:
+      - "sets_details": list of sets with "set_number", "reps", and "weight" (numeric, lbs only)
+    - For cardio:
+      - "duration": in minutes
+      - "distance": in miles
+      - "pace": optional (minutes per mile)
 
-### Goal Type Guidelines:
-- If a goal mentions repeating something "daily", "weekly", or similar, assume it means "in one day" or "in one week".
-- Default to `goal_type: "single_session"` unless **one of the following is clearly true**:
-  - The user explicitly states a **total or combined amount over time** using words like “total”, “combined”, or equivalent EXPLICITLY.
-  - The goal is **general or schedule-based**, such as “do cardio 5 times” or “work out 3 days a week”.
-- Use `goal_type: "aggregate"` only for cumulative goals across multiple sessions, and only when the user makes this intent clear through specific language.
-- Use `exercise_type: "general"` for non-exercise-specific goals such as “stay active every day” or “train 4 times a week”.
+    ### Goal Format (match this SQL schema exactly):
+    Each goal must include:
+    - "name": short title like "Bench 225" or "Run 10 miles"
+    - "description": detailed description (optional)
+    - "start_date": ISO format string
+    - "end_date": optional ISO string (for longer goals)
+    - "goal_type": one of: "single_session" or "aggregate"
+    - "exercise_type": one of: "strength", "cardio", "general"
+    - "exercise_name": optional, e.g. "bench press"
+    - "targets": list of objects, each with:
+      - "target_metric": one of: "reps", "sets", "distance", "duration", "weight", "sessions", "pace"
+      - "target_value": numeric only (American units)
 
-### Normalization Rules:
-- Convert all distances to miles (1 km = 0.621371 miles)
-- Convert all weights to pounds (1 kg = 2.20462 lbs)
-- Durations must be in minutes
-- Remove units from final output
-- Normalize exercise names (e.g. "dumbell press" → "dumbbell press", "benchpress" → "bench press", "pushups" → "push-ups")
+    Example:
+    "targets": [
+      {{ "target_metric": "weight", "target_value": 225 }},
+      {{ "target_metric": "reps", "target_value": 5 }}
+    ]
 
-### Rules:
-- Do NOT include goals inside the "entries" section
-- Only include keys that are relevant — do not include null or empty values
-- Do NOT guess "date" unless explicitly mentioned
-- Do NOT output extra explanation, only valid parsable JSON
+    ### Goal Type Guidelines:
+    - If a goal mentions repeating something "daily", "weekly", or similar, assume it means "in one day" or "in one week"
+    - Default to `goal_type: "single_session"` unless **one of the following is clearly true**:
+      - The user explicitly states a **total or combined amount over time**, using words like “total”, “combined”, “cumulative”, or similar
+      - The goal is **general or schedule-based**, such as “do cardio 5 times” or “work out 3 days a week”
+    - Use `goal_type: "aggregate"` **only** for cumulative goals across multiple sessions, and **only** when the user clearly communicates this intent through specific language
+    - Use `exercise_type: "general"` for non-exercise-specific goals such as “stay active every day” or “train 4 times a week”
 
-### Example Output:
+    ### Normalization Rules:
+    - Convert all distances to miles (1 km = 0.621371 miles)
+    - Convert all weights to pounds (1 kg = 2.20462 lbs)
+    - Durations must be in minutes
+    - Remove units from final output
+    - Normalize exercise names (e.g. "dumbell press" → "dumbbell press", "benchpress" → "bench press", "pushups" → "push-ups")
 
-{{
-  "date": "2024-05-11",
-  "entries": [
+    ### Rules:
+    - Do NOT include goals inside the "entries" section
+    - Only include keys that are relevant — do not include null or empty values
+    - Do NOT guess "date" unless explicitly mentioned
+    - Do NOT output extra explanation, only valid parsable JSON
+    - If no goal name is given, generate a short title based on the user's phrasing (e.g., "Run this week", "Bench 225")
+
+    ### Example Output:
+
     {{
-      "type": "strength",
-      "exercise": "bench press",
-      "sets_details": [
-        {{ "set_number": 1, "reps": 8, "weight": 135 }},
-        {{ "set_number": 2, "reps": 6, "weight": 155 }}
+      "date": "2024-05-11",
+      "entries": [
+        {{
+          "type": "strength",
+          "exercise": "bench press",
+          "sets_details": [
+            {{ "set_number": 1, "reps": 8, "weight": 135 }},
+            {{ "set_number": 2, "reps": 6, "weight": 155 }}
+          ],
+          "notes": "felt strong"
+        }},
+        {{
+          "type": "cardio",
+          "exercise": "running",
+          "duration": 30,
+          "distance": 3.1
+        }}
       ],
-      "notes": "felt strong"
-    }},
-    {{
-      "type": "cardio",
-      "exercise": "running",
-      "duration": 30,
-      "distance": 3.1
-    }}
-  ],
-  "notes": "solid day",
-  "goals": [
-    {{
-      "name": "Bench 225",
-      "description": "Try 225 lbs bench press next week",
-      "start_date": "2024-05-18",
-      "goal_type": "single_session",
-      "exercise_type": "strength",
-      "exercise_name": "bench press",
-      "targets": [
-        {{ "target_metric": "weight", "target_value": 225 }}
-      ]
-    }},
-    {{
-      "name": "Run 10 miles this week",
-      "description": "Run at least 10 miles per week",
-      "start_date": "2024-05-13",
-      "goal_type": "aggregate",
-      "exercise_type": "cardio",
-      "exercise_name": "running",
-      "targets": [
-        {{ "target_metric": "distance", "target_value": 10 }}
+      "notes": "solid day",
+      "goals": [
+        {{
+          "name": "Bench 225",
+          "description": "Try 225 lbs bench press next week",
+          "start_date": "2024-05-18",
+          "goal_type": "single_session",
+          "exercise_type": "strength",
+          "exercise_name": "bench press",
+          "targets": [
+            {{ "target_metric": "weight", "target_value": 225 }}
+          ]
+        }},
+        {{
+          "name": "Run 10 miles this week",
+          "description": "Run at least 10 miles in one week",
+          "start_date": "2024-05-13",
+          "goal_type": "aggregate",
+          "exercise_type": "cardio",
+          "exercise_name": "running",
+          "targets": [
+            {{ "target_metric": "distance", "target_value": 10 }}
+          ]
+        }}
       ]
     }}
-  ]
-}}
 
-### Input:
-{text}
+    ### Input:
+    {text}
     """
 
     response = client.chat.completions.create(

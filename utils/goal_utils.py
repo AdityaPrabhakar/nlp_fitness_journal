@@ -3,7 +3,6 @@ from models import Goal, GoalProgress, MetricEnum, GoalTypeEnum
 from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
 from init import db
 
-
 # -----------------------------
 # Utility Functions
 # -----------------------------
@@ -38,7 +37,7 @@ def extract_metric_from_entries(entries, metric):
                 elif metric == MetricEnum.duration:
                     total += cardio.duration or 0
                 elif metric == MetricEnum.pace:
-                    total += cardio.pace or 0
+                    total = cardio.pace or 0
     return total
 
 
@@ -50,7 +49,6 @@ def to_date(d):
     if isinstance(d, str):
         return datetime.strptime(d, "%Y-%m-%d").date()
     raise ValueError(f"Unsupported date format: {d} (type: {type(d)})")
-
 
 
 def filter_sessions_by_type_and_date(sessions, exercise_type, start_date, end_date):
@@ -72,6 +70,27 @@ def filter_entries_by_exercise(entries, exercise_type, exercise_name):
     ]
 
 
+def entries_meet_conditions(entries, targets):
+    min_weight = next((t.value for t in targets if t.metric == MetricEnum.weight), None)
+    max_pace = next((t.value for t in targets if t.metric == MetricEnum.pace), None)
+
+    filtered_entries = []
+    for entry in entries:
+        if entry.type == 'strength':
+            valid_sets = [
+                s for s in entry.strength_entries
+                if (min_weight is None or s.weight >= min_weight)
+            ]
+            if valid_sets:
+                entry.strength_entries = valid_sets
+                filtered_entries.append(entry)
+        elif entry.type == 'cardio' and entry.cardio_detail:
+            pace = entry.cardio_detail.pace
+            if max_pace is None or (pace and pace <= max_pace):
+                filtered_entries.append(entry)
+
+    return filtered_entries
+
 # -----------------------------
 # Evaluation Functions
 # -----------------------------
@@ -86,47 +105,53 @@ def evaluate_single_session_goal(goal: Goal, session: WorkoutSession):
     if not entries:
         return
 
+    filtered_entries = entries_meet_conditions(entries, goal.targets)
+
     all_targets_met = True
+    progress_entries = []
+
     for target in goal.targets:
-        value = extract_metric_from_entries(entries, target.metric)
+        value = extract_metric_from_entries(filtered_entries, target.metric)
         if value >= target.value:
-            progress = GoalProgress(
+            progress_entries.append(GoalProgress(
                 goal_id=goal.id,
                 session_id=session.id,
                 metric=target.metric,
                 value_achieved=value,
                 achieved_on=session_date,
                 is_complete=True
-            )
-            db.session.add(progress)
+            ))
         else:
             all_targets_met = False
+            break
 
-    return all_targets_met
-
+    if all_targets_met:
+        for p in progress_entries:
+            db.session.add(p)
 
 
 def evaluate_aggregate_goal(goal: Goal, sessions: list[WorkoutSession]):
     relevant_sessions = filter_sessions_by_type_and_date(
         sessions, goal.exercise_type.value, goal.start_date, goal.end_date or datetime.utcnow().date()
     )
-    entries = []
+
+    all_entries = []
     for s in relevant_sessions:
-        entries.extend(get_entries_from_session(s, goal.exercise_type.value, goal.exercise_name))
+        session_entries = get_entries_from_session(s, goal.exercise_type.value, goal.exercise_name)
+        all_entries.extend(entries_meet_conditions(session_entries, goal.targets))
 
     for target in goal.targets:
-        total = extract_metric_from_entries(entries, target.metric)
+        total = extract_metric_from_entries(all_entries, target.metric)
         is_complete = total >= target.value
 
-        progress = GoalProgress(
+        db.session.add(GoalProgress(
             goal_id=goal.id,
             session_id=None,
             metric=target.metric,
             value_achieved=total,
             achieved_on=datetime.utcnow().date(),
             is_complete=is_complete
-        )
-        db.session.add(progress)
+        ))
 
 
 def evaluate_general_aggregate_goal(goal: Goal, sessions: list[WorkoutSession]):
@@ -139,15 +164,14 @@ def evaluate_general_aggregate_goal(goal: Goal, sessions: list[WorkoutSession]):
             count = len(filtered_sessions)
             is_complete = count >= target.value
 
-            progress = GoalProgress(
+            db.session.add(GoalProgress(
                 goal_id=goal.id,
                 session_id=None,
                 metric=target.metric,
                 value_achieved=count,
                 achieved_on=datetime.utcnow().date(),
                 is_complete=is_complete
-            )
-            db.session.add(progress)
+            ))
 
 
 # -----------------------------
@@ -163,3 +187,41 @@ def evaluate_goal(goal: Goal, user_sessions: list[WorkoutSession], current_sessi
             evaluate_aggregate_goal(goal, user_sessions)
         else:
             evaluate_general_aggregate_goal(goal, user_sessions)
+
+# -----------------------------
+# Serialization
+# -----------------------------
+
+def serialize_goal(goal):
+    return {
+        "id": goal.id,
+        "user_id": goal.user_id,
+        "name": goal.name,
+        "description": goal.description,
+        "start_date": goal.start_date.isoformat(),
+        "end_date": goal.end_date.isoformat() if goal.end_date else None,
+        "goal_type": goal.goal_type.value,
+        "exercise_type": goal.exercise_type.value if goal.exercise_type else None,
+        "exercise_name": goal.exercise_name,
+        "created_at": goal.created_at.isoformat() if goal.created_at else None,
+        "updated_at": goal.updated_at.isoformat() if goal.updated_at else None,
+    }
+
+def serialize_target(target):
+    return {
+        "id": target.id,
+        "goal_id": target.goal_id,
+        "metric": target.metric.value,
+        "value": target.value,
+    }
+
+def serialize_progress(progress):
+    return {
+        "id": progress.id,
+        "goal_id": progress.goal_id,
+        "session_id": progress.session_id,
+        "metric": progress.metric.value,
+        "value_achieved": progress.value_achieved,
+        "is_complete": progress.is_complete,
+        "achieved_on": progress.achieved_on.isoformat(),
+    }
