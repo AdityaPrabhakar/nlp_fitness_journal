@@ -140,7 +140,7 @@ def parse_workout_and_goals(text):
     """
 
     response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4.1",
         messages=[
             {
                 "role": "system",
@@ -296,7 +296,7 @@ Do not include any text outside the JSON block.
 """
 
     response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4.1",
         messages=[
             {"role": "system", "content": "You are a helpful assistant that provides realistic strength training set recommendations."},
             {"role": "user", "content": prompt}
@@ -374,7 +374,7 @@ Goal: {goal}
 """
 
     response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4.1",
         messages=[
             {"role": "system", "content": "You are a helpful assistant that gives intelligent cardio training suggestions."},
             {"role": "user", "content": prompt}

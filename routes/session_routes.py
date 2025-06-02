@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, render_template, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.orm import joinedload
 
-from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
+from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry, Goal
 from init import db
 
 session_bp = Blueprint('session', __name__)
@@ -32,7 +32,6 @@ def get_all_sessions():
     return jsonify(result)
 
 
-# Endpoint to fetch a specific session's details
 @session_bp.route('/api/session/<int:session_id>', methods=['GET'])
 @jwt_required()
 def get_session_details(session_id):
@@ -68,13 +67,36 @@ def get_session_details(session_id):
 
         entry_list.append(entry_data)
 
+    # Fetch and serialize goals associated with the session
+    goals = Goal.query.filter_by(session_id=session.id).all()
+    goals_data = []
+    for g in goals:
+        goals_data.append({
+            "id": g.id,
+            "name": g.name,
+            "description": g.description,
+            "start_date": g.start_date.isoformat(),
+            "end_date": g.end_date.isoformat() if g.end_date else None,
+            "goal_type": g.goal_type.value,
+            "exercise_type": g.exercise_type.value if g.exercise_type else None,
+            "exercise_name": g.exercise_name,
+            "targets": [
+                {
+                    "target_metric": t.metric.value,
+                    "target_value": t.value
+                } for t in g.targets
+            ]
+        })
+
     return jsonify({
         'id': session.id,
         'date': session.date,
         'raw_text': session.raw_text,
         'notes': session.notes,
-        'entries': entry_list
+        'entries': entry_list,
+        'goals': goals_data
     })
+
 
 @session_bp.route("/api/sessions/by-exercise", methods=["GET"])
 @jwt_required()

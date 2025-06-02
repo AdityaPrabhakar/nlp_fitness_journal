@@ -45,6 +45,7 @@ class Goal(db.Model):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    session_id = Column(Integer, ForeignKey('workout_session.id'), nullable=True)  # Nullable for aggregate progress
 
     name = Column(String, nullable=False)
     description = Column(Text)

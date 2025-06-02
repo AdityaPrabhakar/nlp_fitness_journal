@@ -70,14 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const sessionId = result.session_id;
         const sessionDate = result.session_date;
-        console.log(`[Session] ID: ${sessionId}, Date: ${sessionDate}`);
 
         const prHtml = result.new_prs?.length
           ? `
-            <div class="bg-green-50 border border-green-200 text-green-900 rounded-lg p-4 transition-all duration-500 ease-out">
-              <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">
-                <span>🎉 New Personal Records!</span>
-              </h3>
+            <div class="bg-green-50 border border-green-200 text-green-900 rounded-lg p-4">
+              <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">🎉 New Personal Records!</h3>
               <ul class="list-disc list-inside space-y-1">
                 ${result.new_prs.map(pr => `
                   <li><strong>${pr.exercise}</strong> (${pr.field}): ${pr.value} ${pr.units}</li>
@@ -89,10 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const goalsHtml = result.goals?.length
           ? `
-            <div class="bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-4 transition-all duration-500 ease-out">
-              <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">
-                <span>🎯 New Goals Logged</span>
-              </h3>
+            <div class="bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-4">
+              <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">🎯 New Goals Logged</h3>
               <ul class="space-y-3">
                 ${result.goals.map(goal => `
                   <li class="flex items-start gap-2">
@@ -106,9 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
                           ${goal.targets.map(t => `<li>${t.target_metric}: ${t.target_value}</li>`).join('')}
                         </ul>
                       ` : ''}
-                      ${goal.end_date ? `
-                        <div class="text-xs text-gray-500 mt-1">Ends: ${goal.end_date}</div>
-                      ` : ''}
+                      ${goal.end_date ? `<div class="text-xs text-gray-500 mt-1">Ends: ${goal.end_date}</div>` : ''}
                     </div>
                   </li>
                 `).join('')}
@@ -122,10 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
           `
           : result.repeated_goals?.length
             ? `
-              <div class="bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-lg p-4 transition-all duration-500 ease-out">
-                <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">
-                  <span>⚠️ Repeated Goals Skipped</span>
-                </h3>
+              <div class="bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-lg p-4">
+                <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">⚠️ Repeated Goals Skipped</h3>
                 <ul class="space-y-3">
                   ${result.repeated_goals.map(goal => `
                     <li class="flex items-start gap-2">
@@ -139,9 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${goal.targets.map(t => `<li>${t.target_metric}: ${t.target_value}</li>`).join('')}
                           </ul>
                         ` : ''}
-                        ${goal.end_date ? `
-                          <div class="text-xs text-gray-500 mt-1">Ends: ${goal.end_date}</div>
-                        ` : ''}
+                        ${goal.end_date ? `<div class="text-xs text-gray-500 mt-1">Ends: ${goal.end_date}</div>` : ''}
                       </div>
                     </li>
                   `).join('')}
@@ -150,41 +139,55 @@ document.addEventListener('DOMContentLoaded', () => {
             `
             : '';
 
+        const journalHtml = result.raw_text
+          ? `
+            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <h3 class="font-semibold text-lg mb-2 text-gray-800">📝 Journal Entry</h3>
+              <div class="whitespace-pre-wrap text-sm text-gray-700">${result.raw_text}</div>
+            </div>
+          `
+          : '';
+
         let trendData = null;
         if (sessionId) {
           const trendUrl = `/api/workout-trends/${sessionId}?date=${encodeURIComponent(sessionDate)}&count=5`;
           console.log('[API] Fetching workout trend data from:', trendUrl);
           const trendRes = await authFetch(trendUrl);
           trendData = await trendRes.json();
-          console.log('[API] Received trend data:', trendData);
         }
+
+        const hasTrends = trendData && (
+          (trendData.strength && Object.keys(trendData.strength).length > 0) ||
+          (trendData.cardio && Object.keys(trendData.cardio).length > 0)
+        );
 
         const modalContent = `
           <div class="p-4 space-y-6">
             <h2 class="text-2xl font-bold text-center">Journal Entry Created! 🥳</h2>
             ${prHtml}
             ${goalsHtml}
+            ${journalHtml}
             ${
-              sessionId
+              hasTrends
                 ? `
-                <p class="text-gray-600 text-lg text-center">Workout Summary</p>
-                <div id="trend-tabs" class="mb-4 flex space-x-2 border-b"></div>
-                <div id="trend-container" class="mt-4"></div>
+                  <p class="text-gray-600 text-lg text-center">Workout Summary</p>
+                  <div id="trend-tabs" class="mb-4 flex space-x-2 border-b"></div>
+                  <div id="trend-container" class="mt-4"></div>
                 `
                 : ''
             }
           </div>
         `;
 
-        console.log('[Modal] Replacing loading modal with summary modal...');
         openModal(modalContent, { title: 'Workout Summary', size: 'xl' });
 
-        if (trendData) {
+        if (hasTrends) {
           setTimeout(() => {
             console.log('[Chart] Rendering trend charts...');
             renderTrendCharts(trendData);
           }, 100);
         }
+
       } else {
         console.error('[Error] Workout log failed:', result.error);
         alert("Error logging workout: " + (result.error || "Unknown error"));

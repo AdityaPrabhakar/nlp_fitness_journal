@@ -70,26 +70,50 @@ def filter_entries_by_exercise(entries, exercise_type, exercise_name):
     ]
 
 
-def entries_meet_conditions(entries, targets):
+def entries_meet_conditions(entries, targets, pace_tolerance=0.01):
     min_weight = next((t.value for t in targets if t.metric == MetricEnum.weight), None)
     max_pace = next((t.value for t in targets if t.metric == MetricEnum.pace), None)
+
+    print(f"[DEBUG] Checking {len(entries)} entries with min_weight={min_weight}, max_pace={max_pace}")
 
     filtered_entries = []
     for entry in entries:
         if entry.type == 'strength':
-            valid_sets = [
-                s for s in entry.strength_entries
-                if (min_weight is None or s.weight >= min_weight)
-            ]
+            valid_sets = []
+            for s in entry.strength_entries:
+                if min_weight is None or s.weight >= min_weight:
+                    valid_sets.append(s)
+                    print(f"[DEBUG] Strength set accepted: weight={s.weight} (min required: {min_weight})")
+                else:
+                    print(f"[DEBUG] Strength set rejected: weight={s.weight} < min required {min_weight}")
             if valid_sets:
                 entry.strength_entries = valid_sets
                 filtered_entries.append(entry)
+                print(f"[INFO] Strength entry accepted with {len(valid_sets)} valid sets")
+            else:
+                print(f"[INFO] Strength entry rejected (no valid sets)")
+
+
         elif entry.type == 'cardio' and entry.cardio_detail:
             pace = entry.cardio_detail.pace
-            if max_pace is None or (pace and pace <= max_pace):
+            if max_pace is None:
                 filtered_entries.append(entry)
+                print(f"[INFO] Cardio entry accepted (no max pace defined)")
+            elif pace is not None and pace <= max_pace + pace_tolerance:
+                filtered_entries.append(entry)
+                print(
+                    f"[INFO] Cardio entry accepted: pace={pace:.2f} <= max pace {max_pace:.2f} (+ tolerance {pace_tolerance})")
+            else:
+                if pace is None:
+                    print(
+                        f"[INFO] Cardio entry rejected: pace is None (max pace {max_pace}, tolerance {pace_tolerance})")
+                else:
+                    print(
+                        f"[INFO] Cardio entry rejected: pace={pace:.2f} > max pace {max_pace:.2f} (+ tolerance {pace_tolerance})")
 
+    print(f"[RESULT] Total entries accepted: {len(filtered_entries)}")
     return filtered_entries
+
 
 # -----------------------------
 # Evaluation Functions
@@ -97,22 +121,35 @@ def entries_meet_conditions(entries, targets):
 
 def evaluate_single_session_goal(goal: Goal, session: WorkoutSession):
     session_date = to_date(session.date)
+    goal_end_date = to_date(goal.end_date or datetime.utcnow().date())
+    print(f"[DEBUG] Evaluating goal {goal.id} for session {session.id} on {session_date}")
 
-    if not (to_date(goal.start_date) <= session_date <= to_date(goal.end_date or datetime.utcnow().date())):
+    if not (to_date(goal.start_date) <= session_date <= goal_end_date):
+        print(f"[INFO] Session date {session_date} is outside goal date range {goal.start_date} to {goal_end_date}")
         return
 
     entries = get_entries_from_session(session, goal.exercise_type.value, goal.exercise_name)
     if not entries:
+        print(f"[INFO] No matching entries found in session {session.id} for goal exercise {goal.exercise_name}")
         return
 
     filtered_entries = entries_meet_conditions(entries, goal.targets)
+    print(f"[DEBUG] {len(filtered_entries)} entries remained after filtering for goal conditions")
 
     all_targets_met = True
     progress_entries = []
 
     for target in goal.targets:
         value = extract_metric_from_entries(filtered_entries, target.metric)
-        if value >= target.value:
+        print(f"[DEBUG] Target check: metric={target.metric}, required={target.value}, achieved={value}")
+
+        # Adjust comparison for pace (lower is better)
+        if target.metric == MetricEnum.pace:
+            condition_met = value <= target.value
+        else:
+            condition_met = value >= target.value
+
+        if condition_met:
             progress_entries.append(GoalProgress(
                 goal_id=goal.id,
                 session_id=session.id,
@@ -122,12 +159,18 @@ def evaluate_single_session_goal(goal: Goal, session: WorkoutSession):
                 is_complete=True
             ))
         else:
+            print(f"[INFO] Target not met: {target.metric} required {target.value}, got {value}")
             all_targets_met = False
             break
 
     if all_targets_met:
+        print(f"[SUCCESS] All targets met for goal {goal.id} in session {session.id}")
         for p in progress_entries:
             db.session.add(p)
+    else:
+        print(f"[INFO] Goal {goal.id} not completed in session {session.id}")
+
+
 
 
 def evaluate_aggregate_goal(goal: Goal, sessions: list[WorkoutSession]):

@@ -138,8 +138,14 @@ def update_pr_record(user_id, exercise, type_, field, current_value, current_ses
     if top_record:
         value, session_id = top_record
 
-        # If current value beats the best *prior* record
-        if (field != "pace" and current_value > value) or (field == "pace" and current_value < value):
+        # Only create a new PR if current value is strictly better than previous
+        is_new_pr = False
+        if field == "pace":
+            is_new_pr = current_value < value  # lower pace is better
+        else:
+            is_new_pr = current_value > value  # higher is better for all others
+
+        if is_new_pr:
             db.session.add(PersonalRecord(
                 user_id=user_id,
                 exercise=exercise,
