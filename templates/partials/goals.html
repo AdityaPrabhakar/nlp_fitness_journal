@@ -49,19 +49,24 @@
       </div>
 
       <!-- Status Dropdown Checkbox -->
-      <div class="relative col-span-2">
-        <button id="statusDropdownBtn" class="w-full bg-white border rounded p-2 text-left hover:bg-gray-100">Filter by Status</button>
-        <div id="statusDropdown" class="absolute z-10 hidden bg-white border rounded shadow mt-1 w-full">
-          <label class="flex items-center p-2 space-x-2">
-            <input type="checkbox" class="statusOption" value="in_progress" checked />
-            <span>In Progress</span>
-          </label>
-          <label class="flex items-center p-2 space-x-2">
-            <input type="checkbox" class="statusOption" value="completed" checked />
-            <span>Completed</span>
-          </label>
-        </div>
+    <div class="relative col-span-2">
+      <button id="statusDropdownBtn" class="w-full bg-white border rounded p-2 text-left hover:bg-gray-100">Filter by Status</button>
+      <div id="statusDropdown" class="absolute z-10 hidden bg-white border rounded shadow mt-1 w-full">
+        <label class="flex items-center p-2 space-x-2">
+          <input type="checkbox" class="statusOption" value="in_progress" checked />
+          <span>In Progress</span>
+        </label>
+        <label class="flex items-center p-2 space-x-2">
+          <input type="checkbox" class="statusOption" value="completed" checked />
+          <span>Completed</span>
+        </label>
+        <label class="flex items-center p-2 space-x-2">
+          <input type="checkbox" class="statusOption" value="expired" checked />
+          <span>Expired</span>
+        </label>
       </div>
+    </div>
+
 
       <!-- Apply Button -->
       <button id="applyFilters" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 col-span-full md:col-span-1">Apply Filters</button>

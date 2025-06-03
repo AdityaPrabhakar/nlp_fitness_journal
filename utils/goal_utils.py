@@ -320,6 +320,8 @@ def serialize_goal(goal):
         "exercise_name": goal.exercise_name,
         "created_at": goal.created_at.isoformat() if goal.created_at else None,
         "updated_at": goal.updated_at.isoformat() if goal.updated_at else None,
+        "is_complete": goal.is_complete,
+        "is_expired": goal.is_expired
     }
 
 def serialize_target(target):

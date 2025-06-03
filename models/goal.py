@@ -1,8 +1,11 @@
-from datetime import datetime
+from datetime import datetime, date
+from select import select
+
 from sqlalchemy import (
     Column, Integer, String, Float, Date, DateTime, Boolean,
-    ForeignKey, Enum, Text
+    ForeignKey, Enum, Text, exists
 )
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 
 import enum
@@ -65,6 +68,40 @@ class Goal(db.Model):
     # Relationships
     targets = relationship("GoalTarget", back_populates="goal", cascade="all, delete-orphan")
     progress = relationship("GoalProgress", back_populates="goal", cascade="all, delete-orphan")
+
+    @hybrid_property
+    def is_complete(self):
+        return any(p.is_complete for p in self.progress)
+
+    @is_complete.expression
+    def is_complete(cls):
+        progress_complete = (
+            select(GoalProgress.id)
+            .where(GoalProgress.goal_id == cls.id)
+            .where(GoalProgress.is_complete == True)
+            .limit(1)
+        )
+        return exists(progress_complete)
+
+    @hybrid_property
+    def is_expired(self):
+        if self.end_date and date.today() > self.end_date:
+            return not self.is_complete
+        return False
+
+    @is_expired.expression
+    def is_expired(cls):
+        progress_complete = (
+            select(GoalProgress.id)
+            .where(GoalProgress.goal_id == cls.id)
+            .where(GoalProgress.is_complete == True)
+            .limit(1)
+        )
+        return (
+                (cls.end_date != None) &
+                (cls.end_date < date.today()) &
+                (~exists(progress_complete))
+        )
 
 
 class GoalTarget(db.Model):

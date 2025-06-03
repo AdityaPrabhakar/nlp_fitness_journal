@@ -5,14 +5,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('applyFilters').addEventListener('click', fetchGoalsAndRender);
 
-  // Toggle status dropdown
   const dropdownBtn = document.getElementById('statusDropdownBtn');
   const dropdownMenu = document.getElementById('statusDropdown');
   dropdownBtn.addEventListener('click', () => {
     dropdownMenu.classList.toggle('hidden');
   });
 
-  // Close dropdown on outside click
   document.addEventListener('click', (e) => {
     if (!dropdownBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
       dropdownMenu.classList.add('hidden');
@@ -41,32 +39,27 @@ async function fetchGoalsAndRender() {
     container.innerHTML = '';
 
     const filtered = data.filter(goal => {
-      // Filter by goal type
       if (type && goal.goal_type !== type) return false;
-
-      // Filter by exercise type
       if (exercise && goal.exercise_type !== exercise) return false;
-
-      // Filter by exercise name substring
       if (nameSearch && !(goal.exercise_name || '').toLowerCase().includes(nameSearch)) return false;
-
-      // Treat user-supplied startDate and endDate as a filter window
       if (startDate && goal.start_date < startDate) return false;
 
-      // If the goal has an end_date, it must be <= selected endDate
       if (endDate) {
         if (goal.end_date && goal.end_date > endDate) return false;
-        // Open-ended goals are excluded if we are filtering by endDate
         if (!goal.end_date) return false;
-}
+      }
 
+      let status;
+      if (goal.is_complete) {
+        status = 'completed';
+      } else if (goal.is_expired) {
+        status = 'expired';
+      } else {
+        status = 'in_progress';
+      }
 
-
-      // Filter by status
-      const latestProgress = goal.progress?.[goal.progress.length - 1];
-      const isComplete = latestProgress?.is_complete;
-      const status = isComplete ? 'completed' : 'in_progress';
       if (!statusFilters.includes(status)) return false;
+
 
       return true;
     });
@@ -77,13 +70,20 @@ async function fetchGoalsAndRender() {
     }
 
     filtered.forEach(goal => {
-      const latestProgress = goal.progress?.[goal.progress.length - 1];
-      const isGoalComplete = latestProgress?.is_complete;
+      const isGoalComplete = goal.is_complete;
+      const isGoalExpired = goal.is_expired;
+
+      let cardClasses = 'rounded shadow p-4 transition ';
+      if (isGoalComplete) {
+        cardClasses += 'bg-green-50 border border-green-400';
+      } else if (isGoalExpired) {
+        cardClasses += 'bg-red-50 border border-red-400';
+      } else {
+        cardClasses += 'bg-white';
+      }
 
       const card = document.createElement('div');
-      card.className = `rounded shadow p-4 transition ${
-        isGoalComplete ? 'bg-green-50 border border-green-400' : 'bg-white'
-      }`;
+      card.className = cardClasses;
 
       card.innerHTML = `
         <h2 class="text-xl font-semibold mb-1">${goal.name}</h2>
@@ -97,6 +97,7 @@ async function fetchGoalsAndRender() {
 
       container.appendChild(card);
     });
+
 
   } catch (err) {
     console.error('Error loading goals:', err);
@@ -113,24 +114,23 @@ function renderAllProgress(goal) {
   const progressByMetric = {};
   goal.progress.forEach(p => {
     const m = p.metric;
-    // Update only if value is greater OR it's more recent
     if (
       !progressByMetric[m] ||
       p.value_achieved > progressByMetric[m].total
     ) {
       progressByMetric[m] = {
-        total: p.value_achieved,
-        isComplete: p.is_complete
+        total: p.value_achieved
       };
     }
   });
 
   let html = "";
   for (const metric in targetsByMetric) {
-    const { total = 0, isComplete = false } = progressByMetric[metric] || {};
+    const { total = 0 } = progressByMetric[metric] || {};
     const target = targetsByMetric[metric];
 
     const useCheckbox = goal.goal_type === "single_session" || metric === "pace" || metric === "weight";
+    const isComplete = total >= target;
 
     html += useCheckbox
       ? renderCheckboxProgress({
@@ -154,8 +154,6 @@ function renderAllProgress(goal) {
 
 function renderProgress(p) {
   const percent = Math.min(100, (p.total / p.target) * 100).toFixed(0);
-  const isComplete = p.total >= p.target;
-
   return `
     <div class="mb-2">
       <div class="flex justify-between text-sm font-medium mb-1">
@@ -163,7 +161,7 @@ function renderProgress(p) {
         <span>${p.total} / ${p.target} ${p.units}</span>
       </div>
       <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-        <div class="h-full ${isComplete ? 'bg-green-500' : 'bg-blue-500'}" style="width: ${percent}%"></div>
+        <div class="h-full ${p.isComplete ? 'bg-green-500' : 'bg-blue-500'}" style="width: ${percent}%"></div>
       </div>
     </div>
   `;
@@ -180,7 +178,6 @@ function renderCheckboxProgress(p) {
     </div>
   `;
 }
-
 
 function getUnitsForMetric(metric) {
   return {
