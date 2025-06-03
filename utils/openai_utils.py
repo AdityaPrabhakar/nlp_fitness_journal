@@ -17,10 +17,15 @@ def parse_workout_and_goals(text):
     Today's date is {today}. Use this to resolve relative time expressions like "yesterday", "next week", "starting Monday", etc.
 
     ### Relative Time Rules:
-    - "this week" means **in one week**, starting from today
-    - "next week" means the Monday–Sunday range following this week
-    - "this month" means **in one month** starting from today
-    - Use today’s date ({today}) to compute `start_date` and `end_date`
+    - Use today’s date ({today}) to compute `start_date` and `end_date` when relative expressions are used
+    - For phrases like:
+      - "this week": `start_date = today`, `end_date = 7 days after today`
+      - "next week": `start_date = the next Monday`, `end_date = the next Sunday`
+      - "this month": `start_date = today`, `end_date = 30 days after today`
+      - "in two weeks": `start_date = today`, `end_date = 14 days after today`
+      - "by Friday": `start_date = today`, `end_date = the upcoming Friday`
+    - If the time range is ambiguous but says something like “this week” or “this month”, infer a matching `end_date` by default
+
 
     ### Intent Detection Rules:
     - Treat sentences like “I want to…”, “I plan to…”, “I aim to…”, “I'd like to…”, “My goal is…”, “I’m hoping to…” as clear goal declarations
@@ -41,6 +46,7 @@ def parse_workout_and_goals(text):
     - "notes": optional per-exercise notes
     - For strength:
       - "sets_details": list of sets with "set_number", "reps", and "weight" (numeric, lbs only)
++     - Only include "weight" if the user specified it
     - For cardio:
       - "duration": in minutes
       - "distance": in miles

@@ -5,6 +5,7 @@ import { authFetch } from './auth/authFetch.js';
 
 let lastViewedSessionIds = [];
 let lastSessionDetails = [];
+let lastViewedGoals = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   setupModalTriggers();
@@ -45,19 +46,29 @@ document.addEventListener('DOMContentLoaded', () => {
           start: date,
           allDay: true,
           extendedProps: { sessionIds },
-          color: '#3b82f6' // blue
+          color: '#3b82f6'
         }));
 
-        const goalEvents = goals
-          .filter(goal => goal.deadline)
-          .map(goal => ({
-            title: `Goal: ${goal.name}`,
-            start: goal.deadline.split('T')[0],
-            allDay: true,
-            color: '#f59e0b', // amber
-            extendedProps: { goal },
-            display: 'background' // or 'auto' if you want it to be a normal event
-          }));
+        // Group goals by end date
+        const goalsByDate = {};
+        for (const goal of goals) {
+          if (!goal.end_date) continue;
+          const date = goal.end_date.split('T')[0];
+          if (!goalsByDate[date]) {
+            goalsByDate[date] = [];
+          }
+          goalsByDate[date].push(goal);
+        }
+
+        const goalEvents = Object.entries(goalsByDate).map(([date, goalList]) => ({
+          title: goalList.length > 1 ? 'Goals Due!' : 'Goal Due!',
+          start: date,
+          allDay: true,
+          extendedProps: { goals: goalList },
+          color: '#f59e0b',
+          groupId: 'goal',
+        }));
+
 
         successCallback([...sessionEvents, ...goalEvents]);
       } catch (err) {
@@ -67,31 +78,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
     eventClick: async function (info) {
       const sessionIds = info.event.extendedProps.sessionIds;
-      lastViewedSessionIds = sessionIds;
+      const clickedGoals = info.event.extendedProps.goals;
 
-      try {
-        lastSessionDetails = await Promise.all(
-          sessionIds.map(id =>
-            authFetch(`/api/session/${id}`).then(res => res.json())
-          )
-        );
 
-        const content = `
-          <div class="max-h-[80vh] overflow-y-auto pr-2 space-y-6">
-            ${lastSessionDetails
-              .map(data => `
-                <div class="bg-white p-4 shadow rounded-lg border space-y-4">
-                  ${renderGoalsSection(data.goals)}
-                  ${renderSessionDetails(data)}
+      // Handle workout session modal
+      if (sessionIds) {
+        lastViewedSessionIds = sessionIds;
+
+        try {
+          lastSessionDetails = await Promise.all(
+            sessionIds.map(id =>
+              authFetch(`/api/session/${id}`).then(res => res.json())
+            )
+          );
+
+          const content = `
+            <div class="max-h-[80vh] overflow-y-auto pr-2 space-y-6">
+              ${lastSessionDetails
+                .map(data => `
+                  <div class="bg-white p-4 shadow rounded-lg border space-y-4">
+                    ${renderGoalsSection(data.goals)}
+                    ${renderSessionDetails(data)}
+                  </div>
+                `)
+                .join('')}
+            </div>
+          `;
+
+          openModal(content, { title: 'Workout Sessions', size: 'xl' });
+        } catch (err) {
+          console.error('Failed to fetch session details:', err);
+        }
+      }
+
+      // Handle goal deadline modal
+      else if (clickedGoals) {
+        try {
+          lastViewedGoals = clickedGoals;
+
+          const content = `
+            <div class="max-h-[80vh] overflow-y-auto space-y-4 p-2">
+              ${lastViewedGoals.map(goal => `
+                <div class="p-4 bg-white border rounded-lg shadow space-y-2">
+                  <h3 class="text-xl font-bold text-yellow-700">${goal.name}</h3>
+                  <p class="text-sm text-gray-600">Deadline: ${goal.end_date.split('T')[0]}</p>
+                  <p class="text-gray-800">${goal.description || 'No description.'}</p>
+                  <div class="text-sm text-gray-700">
+                    ${goal.target_type ? `Target Type: ${goal.target_type}<br>` : ''}
+                    ${goal.target_field ? `Target Field: ${goal.target_field}<br>` : ''}
+                    ${goal.target_value ? `Target Value: ${goal.target_value}<br>` : ''}
+                    ${goal.exercise ? `Exercise: ${goal.exercise}` : ''}
+                  </div>
                 </div>
-              `)
-              .join('')}
-          </div>
-        `;
+              `).join('')}
+            </div>
+          `;
 
-        openModal(content, { title: 'Workout Sessions', size: 'xl' });
-      } catch (err) {
-        console.error('Failed to fetch session details:', err);
+          openModal(content, { title: 'Goal Deadlines', size: 'xl' });
+        } catch (err) {
+          console.error('Failed to fetch goal data:', err);
+        }
       }
     }
   });
@@ -148,7 +194,6 @@ document.addEventListener('click', async (e) => {
         throw new Error(errorMsg);
       }
 
-      // Re-fetch updated session data
       lastSessionDetails = await Promise.all(
         lastViewedSessionIds.map(id =>
           authFetch(`/api/session/${id}`).then(res => res.json())
@@ -171,7 +216,7 @@ document.addEventListener('click', async (e) => {
       openModal(content, { size: 'xl' });
     } catch (err) {
       console.error('Error saving journal entry:', err);
-      alert('Failed to save journal entry. Can you ensure that input is a valid set of workout entries?');
+      alert('Failed to save journal entry. Please check your input format.');
     }
   }
 });
@@ -221,28 +266,9 @@ document.addEventListener('click', async (e) => {
   }
 });
 
-// Back to Sessions from Trend Modal
+// Back and Cancel Handlers
 document.addEventListener('click', (e) => {
-  if (e.target.id === 'back-to-sessions') {
-    const content = `
-      <div class="max-h-[80vh] overflow-y-auto pr-2 space-y-6">
-        ${lastSessionDetails
-          .map(data => `
-            <div class="bg-white p-4 shadow rounded-lg border space-y-4">
-              ${renderGoalsSection(data.goals)}
-              ${renderSessionDetails(data)}
-            </div>
-          `)
-          .join('')}
-      </div>
-    `;
-    openModal(content, { title: 'Workout Sessions', size: 'xl' });
-  }
-});
-
-// Cancel Edit - Back to Sessions
-document.addEventListener('click', (e) => {
-  if (e.target.id === 'cancel-edit-journal') {
+  if (e.target.id === 'back-to-sessions' || e.target.id === 'cancel-edit-journal') {
     const content = `
       <div class="max-h-[80vh] overflow-y-auto pr-2 space-y-6">
         ${lastSessionDetails
@@ -272,19 +298,10 @@ function renderGoalsSection(goals = []) {
           <div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
             <div class="flex justify-between items-start">
               <div>
-                <p class="text-sm text-gray-500">Goal:</p>
-                <p class="text-md font-semibold text-gray-800">${goal.name}</p>
+                <p class="font-semibold">${goal.name}</p>
+                <p class="text-sm text-gray-600">${goal.description || 'No description.'}</p>
               </div>
-              ${goal.completed ? '<span class="text-green-600 text-sm font-medium">Completed</span>' : ''}
-            </div>
-            <div class="mt-2 text-sm text-gray-700">
-              <p><strong>Exercise:</strong> ${goal.exercise_name} (${goal.exercise_type})</p>
-              <p><strong>Type:</strong> ${goal.goal_type.replace('_', ' ')}</p>
-              <ul class="list-disc list-inside mt-2">
-                ${goal.targets.map(t => `
-                  <li>${t.target_metric}: ${t.target_value}</li>
-                `).join('')}
-              </ul>
+              <p class="text-xs text-gray-500">${goal.end_date?.split('T')[0] || ''}</p>
             </div>
           </div>
         `).join('')}

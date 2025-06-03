@@ -1,4 +1,7 @@
 from datetime import datetime, date
+
+from sqlalchemy import desc
+
 from models import Goal, GoalProgress, MetricEnum, GoalTypeEnum
 from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry
 from init import db
@@ -119,6 +122,48 @@ def entries_meet_conditions(entries, targets, pace_tolerance=0.01):
 # Evaluation Functions
 # -----------------------------
 
+def progress_has_changed(goal_id: int, metric: MetricEnum, new_value: float) -> bool:
+    from sqlalchemy import and_, desc
+
+    if isinstance(metric, str):
+        try:
+            metric = MetricEnum(metric)
+        except ValueError:
+            raise ValueError(f"Invalid metric string: {metric}")
+
+    print(f"\n[progress_has_changed] START — goal_id={goal_id}, metric={metric.name}, new_value={new_value}")
+
+    query = GoalProgress.query.filter(
+        and_(
+            GoalProgress.goal_id == goal_id,
+            GoalProgress.metric == metric.value
+        )
+    ).order_by(desc(GoalProgress.achieved_on), desc(GoalProgress.id))
+
+    print(f"[progress_has_changed] Query: goal_id={goal_id}, metric={metric.value}")
+
+    previous_progress = query.first()
+
+    if not previous_progress:
+        print("[progress_has_changed] No previous progress found. Returning True.")
+        return True
+
+    print(f"[progress_has_changed] Fetched GoalProgress row:")
+    print(f"  ID: {previous_progress.id}")
+    print(f"  Goal ID: {previous_progress.goal_id}")
+    print(f"  Metric: {previous_progress.metric}")
+    print(f"  Achieved On: {previous_progress.achieved_on}")
+    print(f"  Value Achieved: {previous_progress.value_achieved} (type={type(previous_progress.value_achieved)})")
+
+    has_changed = previous_progress.value_achieved != new_value
+    print(f"[progress_has_changed] Value changed? {has_changed} (prev={previous_progress.value_achieved}, new={new_value})")
+
+    print(f"[progress_has_changed] END\n")
+    return has_changed
+
+
+
+
 def evaluate_single_session_goal(goal: Goal, session: WorkoutSession):
     session_date = to_date(session.date)
     goal_end_date = to_date(goal.end_date or datetime.utcnow().date())
@@ -143,21 +188,23 @@ def evaluate_single_session_goal(goal: Goal, session: WorkoutSession):
         value = extract_metric_from_entries(filtered_entries, target.metric)
         print(f"[DEBUG] Target check: metric={target.metric}, required={target.value}, achieved={value}")
 
-        # Adjust comparison for pace (lower is better)
         if target.metric == MetricEnum.pace:
             condition_met = value <= target.value
         else:
             condition_met = value >= target.value
 
         if condition_met:
-            progress_entries.append(GoalProgress(
-                goal_id=goal.id,
-                session_id=session.id,
-                metric=target.metric,
-                value_achieved=value,
-                achieved_on=session_date,
-                is_complete=True
-            ))
+            if progress_has_changed(goal.id, target.metric, value):
+                progress_entries.append(GoalProgress(
+                    goal_id=goal.id,
+                    session_id=session.id,
+                    metric=target.metric,
+                    value_achieved=value,
+                    achieved_on=session_date,
+                    is_complete=True
+                ))
+            else:
+                print(f"[INFO] No change in progress for {target.metric}, skipping entry.")
         else:
             print(f"[INFO] Target not met: {target.metric} required {target.value}, got {value}")
             all_targets_met = False
@@ -169,8 +216,6 @@ def evaluate_single_session_goal(goal: Goal, session: WorkoutSession):
             db.session.add(p)
     else:
         print(f"[INFO] Goal {goal.id} not completed in session {session.id}")
-
-
 
 
 def evaluate_aggregate_goal(goal: Goal, sessions: list[WorkoutSession]):
@@ -185,36 +230,53 @@ def evaluate_aggregate_goal(goal: Goal, sessions: list[WorkoutSession]):
 
     for target in goal.targets:
         total = extract_metric_from_entries(all_entries, target.metric)
-        is_complete = total >= target.value
 
-        db.session.add(GoalProgress(
-            goal_id=goal.id,
-            session_id=None,
-            metric=target.metric,
-            value_achieved=total,
-            achieved_on=datetime.utcnow().date(),
-            is_complete=is_complete
-        ))
+        if target.metric == 'pace':
+            is_complete = total <= target.value
+        else:
+            is_complete = total >= target.value
+
+        if progress_has_changed(goal.id, target.metric, total):
+            db.session.add(GoalProgress(
+                goal_id=goal.id,
+                session_id=None,
+                metric=target.metric,
+                value_achieved=total,
+                achieved_on=datetime.utcnow().date(),
+                is_complete=is_complete
+            ))
+        else:
+            print(f"[INFO] No change in aggregate progress for {target.metric}, skipping entry.")
 
 
 def evaluate_general_aggregate_goal(goal: Goal, sessions: list[WorkoutSession]):
+    print(f"[DEBUG] Evaluating general aggregate goal {goal.id} for exercise {goal.exercise_name}")
+
     filtered_sessions = filter_sessions_by_type_and_date(
         sessions, goal.exercise_type.value, goal.start_date, goal.end_date or datetime.utcnow().date()
     )
+    print(f"[DEBUG] Found {len(filtered_sessions)} relevant sessions for goal {goal.id} between {goal.start_date} and {goal.end_date or datetime.utcnow().date()}")
 
     for target in goal.targets:
         if target.metric == MetricEnum.sessions:
             count = len(filtered_sessions)
             is_complete = count >= target.value
 
-            db.session.add(GoalProgress(
-                goal_id=goal.id,
-                session_id=None,
-                metric=target.metric,
-                value_achieved=count,
-                achieved_on=datetime.utcnow().date(),
-                is_complete=is_complete
-            ))
+            print(f"[DEBUG] Target check: metric=sessions, required={target.value}, achieved={count}, is_complete={is_complete}")
+
+            if progress_has_changed(goal.id, 'sessions', count):
+                print(f"[SUCCESS] New session count progress for goal {goal.id}: {count} sessions. Creating GoalProgress.")
+                db.session.add(GoalProgress(
+                    goal_id=goal.id,
+                    session_id=None,
+                    metric=target.metric,
+                    value_achieved=count,
+                    achieved_on=datetime.utcnow().date(),
+                    is_complete=is_complete
+                ))
+            else:
+                print(f"[INFO] No change in session count for goal {goal.id}, skipping GoalProgress entry.")
+
 
 
 # -----------------------------

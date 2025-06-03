@@ -1,4 +1,4 @@
-import {authFetch} from "./auth/authFetch.js";
+import { authFetch } from "./auth/authFetch.js";
 
 document.addEventListener('DOMContentLoaded', () => {
   fetchGoalsAndRender();
@@ -62,20 +62,23 @@ function renderAllProgress(goal) {
   let html = "";
   for (const metric in targetsByMetric) {
     const total = progressByMetric[metric] || 0;
+    const target = targetsByMetric[metric];
 
-    const useCheckbox = goal.goal_type === "single_session" || metric === "pace";
+    const useCheckbox = goal.goal_type === "single_session" || metric === "pace" || metric === "weight";
+    const direction = metric === "pace" ? "lower" : "higher";
 
     html += useCheckbox
       ? renderCheckboxProgress({
           metric,
           total,
-          target: targetsByMetric[metric],
-          units: getUnitsForMetric(metric)
+          target,
+          units: getUnitsForMetric(metric),
+          direction
         })
       : renderProgress({
           metric,
           total,
-          target: targetsByMetric[metric],
+          target,
           units: getUnitsForMetric(metric)
         });
   }
@@ -101,11 +104,20 @@ function renderProgress(p) {
 }
 
 function renderCheckboxProgress(p) {
-  const isComplete = p.total >= p.target;
+  let isComplete;
+  if (p.direction === "lower") {
+    isComplete = p.total <= p.target;
+  } else {
+    isComplete = p.total >= p.target;
+  }
+
   return `
     <div class="mb-2 flex items-center space-x-2">
       <input type="checkbox" ${isComplete ? 'checked' : ''} disabled class="accent-green-600 h-4 w-4">
-      <label class="text-sm font-medium">${p.metric.toUpperCase()}: ${p.total} / ${p.target} ${p.units}</label>
+      <label class="text-sm font-medium">
+        ${p.metric.toUpperCase()}: 
+        ${p.metric === 'pace' ? `${p.target} ${p.units}` : `${p.total} / ${p.target} ${p.units}`}
+      </label>
     </div>
   `;
 }

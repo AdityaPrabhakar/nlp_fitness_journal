@@ -25,6 +25,7 @@ class MetricEnum(enum.Enum):
     sessions = 'sessions'
     pace = 'pace'
 
+
 class RepeatIntervalEnum(enum.Enum):
     daily = 'daily'
     weekly = 'weekly'

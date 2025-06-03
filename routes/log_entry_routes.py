@@ -161,7 +161,7 @@ def log_workout():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
-    session = WorkoutSession(user_id=user_id, date=parsed_date or today_date, raw_text=raw_text, notes=notes)
+    session = WorkoutSession(user_id=user_id, date=parsed_date or today_date, raw_text=raw_text, notes=notes, time=datetime.now().time())
     db.session.add(session)
     db.session.commit()
 
