@@ -288,6 +288,11 @@ def evaluate_general_aggregate_goal(goal: Goal, sessions: list[WorkoutSession]):
 # -----------------------------
 
 def evaluate_goal(goal: Goal, user_sessions: list[WorkoutSession], current_session: WorkoutSession = None):
+    # ✅ Check if any GoalProgress entry marks this goal as complete
+    completed_progress = next((p for p in sorted(goal.progress, key=lambda p: p.achieved_on, reverse=True) if p.is_complete), None)
+    if completed_progress:
+        return  # Goal already completed; skip further evaluation
+
     if goal.goal_type == GoalTypeEnum.single_session:
         if current_session:
             evaluate_single_session_goal(goal, current_session)
@@ -296,6 +301,7 @@ def evaluate_goal(goal: Goal, user_sessions: list[WorkoutSession], current_sessi
             evaluate_aggregate_goal(goal, user_sessions)
         else:
             evaluate_general_aggregate_goal(goal, user_sessions)
+
 
 # -----------------------------
 # Serialization

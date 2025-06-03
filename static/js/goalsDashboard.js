@@ -4,6 +4,20 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchGoalsAndRender();
 
   document.getElementById('applyFilters').addEventListener('click', fetchGoalsAndRender);
+
+  // Toggle status dropdown
+  const dropdownBtn = document.getElementById('statusDropdownBtn');
+  const dropdownMenu = document.getElementById('statusDropdown');
+  dropdownBtn.addEventListener('click', () => {
+    dropdownMenu.classList.toggle('hidden');
+  });
+
+  // Close dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (!dropdownBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+      dropdownMenu.classList.add('hidden');
+    }
+  });
 });
 
 async function fetchGoalsAndRender() {
@@ -15,19 +29,54 @@ async function fetchGoalsAndRender() {
   try {
     const type = document.getElementById('goalTypeFilter').value;
     const exercise = document.getElementById('exerciseTypeFilter').value;
-    const activeOnly = document.getElementById('activeOnly').checked;
+    const nameSearch = document.getElementById('exerciseNameFilter').value.toLowerCase();
+    const startDate = document.getElementById('startDateFilter').value;
+    const endDate = document.getElementById('endDateFilter').value;
+    const statusCheckboxes = document.querySelectorAll('.statusOption:checked');
+    const statusFilters = Array.from(statusCheckboxes).map(cb => cb.value); // ['in_progress', 'completed']
 
     const res = await authFetch(`/api/goals/with-progress`);
     const data = await res.json();
 
     container.innerHTML = '';
 
-    if (!data.length) {
+    const filtered = data.filter(goal => {
+      // Filter by goal type
+      if (type && goal.goal_type !== type) return false;
+
+      // Filter by exercise type
+      if (exercise && goal.exercise_type !== exercise) return false;
+
+      // Filter by exercise name substring
+      if (nameSearch && !(goal.exercise_name || '').toLowerCase().includes(nameSearch)) return false;
+
+      // Treat user-supplied startDate and endDate as a filter window
+      if (startDate && goal.start_date < startDate) return false;
+
+      // If the goal has an end_date, it must be <= selected endDate
+      if (endDate) {
+        if (goal.end_date && goal.end_date > endDate) return false;
+        // Open-ended goals are excluded if we are filtering by endDate
+        if (!goal.end_date) return false;
+}
+
+
+
+      // Filter by status
+      const latestProgress = goal.progress?.[goal.progress.length - 1];
+      const isComplete = latestProgress?.is_complete;
+      const status = isComplete ? 'completed' : 'in_progress';
+      if (!statusFilters.includes(status)) return false;
+
+      return true;
+    });
+
+    if (!filtered.length) {
       container.innerHTML = '<p>No goals found.</p>';
       return;
     }
 
-    data.forEach(goal => {
+    filtered.forEach(goal => {
       const latestProgress = goal.progress?.[goal.progress.length - 1];
       const isGoalComplete = latestProgress?.is_complete;
 
