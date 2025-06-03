@@ -9,7 +9,9 @@
 </head>
 <body class="bg-gray-100 text-gray-800 p-4">
   <div class="max-w-7xl mx-auto">
-    <h1 class="text-3xl font-bold mb-4">🏆 Goals Dashboard</h1>
+
+    <!-- Centered Title -->
+    <h1 class="text-3xl font-bold mb-6 text-center">🏆 Goals Dashboard</h1>
 
     <!-- Go Back Home Button -->
     <div class="mb-6">
@@ -22,55 +24,81 @@
       </a>
     </div>
 
-    <!-- Filters -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-      <!-- Goal Type -->
-      <select id="goalTypeFilter" class="p-2 rounded border">
-        <option value="">All Goal Types</option>
-        <option value="single_session">Single Session</option>
-        <option value="aggregate">Aggregate</option>
-      </select>
+    <!-- Filters Container -->
+    <div class="mb-8 p-4 bg-white rounded-xl shadow">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
 
-      <!-- Exercise Type -->
-      <select id="exerciseTypeFilter" class="p-2 rounded border">
-        <option value="">All Exercise Types</option>
-        <option value="strength">Strength</option>
-        <option value="cardio">Cardio</option>
-        <option value="general">General</option>
-      </select>
+        <!-- Goal Type -->
+        <div>
+          <label for="goalTypeFilter" class="block text-sm font-medium text-gray-700 mb-1">Goal Type</label>
+          <select id="goalTypeFilter" class="p-2 w-full rounded border">
+            <option value="">All Goal Types</option>
+            <option value="single_session">Single Session</option>
+            <option value="aggregate">Aggregate</option>
+          </select>
+        </div>
 
-      <!-- Exercise Name Search -->
-      <input type="text" id="exerciseNameFilter" placeholder="Search Exercise Name" class="p-2 rounded border" />
+        <!-- Exercise Type -->
+        <div>
+          <label for="exerciseTypeFilter" class="block text-sm font-medium text-gray-700 mb-1">Exercise Type</label>
+          <select id="exerciseTypeFilter" class="p-2 w-full rounded border">
+            <option value="">All Exercise Types</option>
+            <option value="strength">Strength</option>
+            <option value="cardio">Cardio</option>
+            <option value="general">General</option>
+          </select>
+        </div>
 
-      <!-- Date Range -->
-      <div class="flex gap-2">
-        <input type="date" id="startDateFilter" class="p-2 rounded border" />
-        <input type="date" id="endDateFilter" class="p-2 rounded border" />
-      </div>
+        <!-- Exercise Name Search -->
+        <div>
+          <label for="exerciseNameFilter" class="block text-sm font-medium text-gray-700 mb-1">Exercise Name</label>
+          <input type="text" id="exerciseNameFilter" placeholder="Search Exercise Name" class="p-2 w-full rounded border" />
+        </div>
 
-      <!-- Status Dropdown Checkbox -->
-    <div class="relative col-span-2">
-      <button id="statusDropdownBtn" class="w-full bg-white border rounded p-2 text-left hover:bg-gray-100">Filter by Status</button>
-      <div id="statusDropdown" class="absolute z-10 hidden bg-white border rounded shadow mt-1 w-full">
-        <label class="flex items-center p-2 space-x-2">
-          <input type="checkbox" class="statusOption" value="in_progress" checked />
-          <span>In Progress</span>
-        </label>
-        <label class="flex items-center p-2 space-x-2">
-          <input type="checkbox" class="statusOption" value="completed" checked />
-          <span>Completed</span>
-        </label>
-        <label class="flex items-center p-2 space-x-2">
-          <input type="checkbox" class="statusOption" value="expired" checked />
-          <span>Expired</span>
-        </label>
+        <!-- Date Range Group -->
+        <div class="col-span-1 sm:col-span-2">
+          <div class="flex gap-4">
+            <!-- Start Date -->
+            <div class="w-1/2">
+              <label for="startDateFilter" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input type="date" id="startDateFilter" class="p-2 w-full rounded border" />
+            </div>
+
+            <!-- End Date -->
+            <div class="w-1/2">
+              <label for="endDateFilter" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <input type="date" id="endDateFilter" class="p-2 w-full rounded border" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Dropdown Checkbox -->
+        <div class="relative col-span-1 sm:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <button id="statusDropdownBtn" class="w-full bg-white border rounded p-2 text-left hover:bg-gray-100">Filter by Status</button>
+          <div id="statusDropdown" class="absolute z-10 hidden bg-white border rounded shadow mt-1 w-full">
+            <label class="flex items-center p-2 space-x-2">
+              <input type="checkbox" class="statusOption" value="in_progress" checked />
+              <span>In Progress</span>
+            </label>
+            <label class="flex items-center p-2 space-x-2">
+              <input type="checkbox" class="statusOption" value="completed" checked />
+              <span>Completed</span>
+            </label>
+            <label class="flex items-center p-2 space-x-2">
+              <input type="checkbox" class="statusOption" value="expired" checked />
+              <span>Expired</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Apply Button -->
+        <div class="col-span-1 sm:col-span-2 xl:col-span-1 flex items-end">
+          <button id="applyFilters" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Apply Filters</button>
+        </div>
       </div>
     </div>
 
-
-      <!-- Apply Button -->
-      <button id="applyFilters" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 col-span-full md:col-span-1">Apply Filters</button>
-    </div>
 
 
     <!-- Goals Container -->

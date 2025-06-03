@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
       dropdownMenu.classList.add('hidden');
     }
   });
+
+  createDeleteModal(); // Create modal once on load
 });
 
 async function fetchGoalsAndRender() {
@@ -31,7 +33,7 @@ async function fetchGoalsAndRender() {
     const startDate = document.getElementById('startDateFilter').value;
     const endDate = document.getElementById('endDateFilter').value;
     const statusCheckboxes = document.querySelectorAll('.statusOption:checked');
-    const statusFilters = Array.from(statusCheckboxes).map(cb => cb.value); // ['in_progress', 'completed']
+    const statusFilters = Array.from(statusCheckboxes).map(cb => cb.value);
 
     const res = await authFetch(`/api/goals/with-progress`);
     const data = await res.json();
@@ -49,19 +51,8 @@ async function fetchGoalsAndRender() {
         if (!goal.end_date) return false;
       }
 
-      let status;
-      if (goal.is_complete) {
-        status = 'completed';
-      } else if (goal.is_expired) {
-        status = 'expired';
-      } else {
-        status = 'in_progress';
-      }
-
-      if (!statusFilters.includes(status)) return false;
-
-
-      return true;
+      let status = goal.is_complete ? 'completed' : goal.is_expired ? 'expired' : 'in_progress';
+      return statusFilters.includes(status);
     });
 
     if (!filtered.length) {
@@ -86,18 +77,29 @@ async function fetchGoalsAndRender() {
       card.className = cardClasses;
 
       card.innerHTML = `
-        <h2 class="text-xl font-semibold mb-1">${goal.name}</h2>
-        <p class="text-sm text-gray-500 mb-1">
-          ${goal.exercise_name || goal.exercise_type} • 
-          <span class="italic text-xs">${goal.goal_type === 'single_session' ? 'Single Session Goal' : 'Aggregate Goal'}</span>
-        </p>
-        ${renderAllProgress(goal)}
-        <p class="text-xs text-gray-400 mt-2">From ${goal.start_date} to ${goal.end_date || 'ongoing'}</p>
+        <div class="flex justify-between items-start">
+          <div>
+            <h2 class="text-xl font-semibold mb-1">${goal.name}</h2>
+            <p class="text-sm text-gray-500 mb-1">
+              ${goal.exercise_name || goal.exercise_type} • 
+              <span class="italic text-xs">${goal.goal_type === 'single_session' ? 'Single Session Goal' : 'Aggregate Goal'}</span>
+            </p>
+            ${renderAllProgress(goal)}
+            <p class="text-xs text-gray-400 mt-2">From ${goal.start_date} to ${goal.end_date || 'ongoing'}</p>
+          </div>
+          <button class="text-gray-400 hover:text-gray-600 text-xl font-bold ml-4 delete-goal-btn" data-goal-id="${goal.id}" title="Delete Goal">×</button>
+        </div>
       `;
 
       container.appendChild(card);
     });
 
+    document.querySelectorAll('.delete-goal-btn').forEach(button => {
+      button.addEventListener('click', (e) => {
+        const goalId = e.currentTarget.getAttribute('data-goal-id');
+        showDeleteModal(goalId);
+      });
+    });
 
   } catch (err) {
     console.error('Error loading goals:', err);
@@ -107,20 +109,13 @@ async function fetchGoalsAndRender() {
 
 function renderAllProgress(goal) {
   const targetsByMetric = {};
-  goal.targets.forEach(t => {
-    targetsByMetric[t.metric] = t.value;
-  });
+  goal.targets.forEach(t => targetsByMetric[t.metric] = t.value);
 
   const progressByMetric = {};
   goal.progress.forEach(p => {
     const m = p.metric;
-    if (
-      !progressByMetric[m] ||
-      p.value_achieved > progressByMetric[m].total
-    ) {
-      progressByMetric[m] = {
-        total: p.value_achieved
-      };
+    if (!progressByMetric[m] || p.value_achieved > progressByMetric[m].total) {
+      progressByMetric[m] = { total: p.value_achieved };
     }
   });
 
@@ -133,20 +128,8 @@ function renderAllProgress(goal) {
     const isComplete = total >= target;
 
     html += useCheckbox
-      ? renderCheckboxProgress({
-          metric,
-          total,
-          target,
-          units: getUnitsForMetric(metric),
-          isComplete
-        })
-      : renderProgress({
-          metric,
-          total,
-          target,
-          units: getUnitsForMetric(metric),
-          isComplete
-        });
+      ? renderCheckboxProgress({ metric, total, target, units: getUnitsForMetric(metric), isComplete })
+      : renderProgress({ metric, total, target, units: getUnitsForMetric(metric), isComplete });
   }
 
   return html;
@@ -189,4 +172,49 @@ function getUnitsForMetric(metric) {
     sessions: "sessions",
     pace: "min/mile",
   }[metric] || "";
+}
+
+// ----- Modal logic -----
+
+function createDeleteModal() {
+  const modal = document.createElement("div");
+  modal.id = "deleteModal";
+  modal.className = "fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40";
+  modal.innerHTML = `
+    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
+      <h2 class="text-lg font-semibold mb-4">Confirm Delete</h2>
+      <p class="mb-6 text-sm text-gray-600">Are you sure you want to delete this goal? This action cannot be undone.</p>
+      <div class="flex justify-end space-x-2">
+        <button id="cancelDeleteBtn" class="px-4 py-2 text-sm rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
+        <button id="confirmDeleteBtn" class="px-4 py-2 text-sm rounded bg-red-500 text-white hover:bg-red-600">Delete</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function showDeleteModal(goalId) {
+  const modal = document.getElementById("deleteModal");
+  modal.classList.remove("hidden");
+
+  const cancelBtn = document.getElementById("cancelDeleteBtn");
+  const confirmBtn = document.getElementById("confirmDeleteBtn");
+
+  const closeModal = () => modal.classList.add("hidden");
+
+  const handleConfirm = async () => {
+    try {
+      const res = await authFetch(`/api/goals/${goalId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error("Failed to delete goal");
+      fetchGoalsAndRender();
+    } catch (err) {
+      console.error("Error deleting goal:", err);
+      alert("There was a problem deleting the goal.");
+    } finally {
+      closeModal();
+    }
+  };
+
+  cancelBtn.onclick = closeModal;
+  confirmBtn.onclick = handleConfirm;
 }

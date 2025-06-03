@@ -70,3 +70,25 @@ def get_goals_with_progress():
         result.append(data)
 
     return jsonify(result)
+
+# --- Delete a Goal ---
+@goal_bp.route("/api/goals/<int:goal_id>", methods=["DELETE"])
+@jwt_required()
+def delete_goal(goal_id):
+    user_id = get_jwt_identity()
+
+    goal = Goal.query.filter_by(id=goal_id, user_id=user_id).first()
+    if not goal:
+        return jsonify({"error": "Goal not found or unauthorized"}), 404
+
+    # Optionally: delete related targets and progress if not set up to cascade
+    for target in goal.targets:
+        db.session.delete(target)
+    for progress in goal.progress:
+        db.session.delete(progress)
+
+    db.session.delete(goal)
+    db.session.commit()
+
+    return jsonify({"message": "Goal deleted successfully"}), 200
+
