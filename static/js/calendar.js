@@ -2,6 +2,7 @@ import { openModal, setupModalTriggers } from './modal.js';
 import { renderSessionDetails } from './sessionRenderer.js';
 import { renderTrendCharts } from './renderTrendCharts.js';
 import { authFetch } from './auth/authFetch.js';
+import {renderGoalCard} from "./goalCard.js";
 
 let lastViewedSessionIds = [];
 let lastSessionDetails = [];
@@ -24,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const [sessionRes, goalsRes] = await Promise.all([
           authFetch('/api/sessions'),
-          authFetch('/api/goals')
+          authFetch('/api/goals/with-progress')
         ]);
 
         const [sessions, goals] = await Promise.all([
@@ -97,7 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
               ${lastSessionDetails
                 .map(data => `
                   <div class="bg-white p-4 shadow rounded-lg border space-y-4">
-                    ${renderGoalsSection(data.goals)}
                     ${renderSessionDetails(data)}
                   </div>
                 `)
@@ -111,32 +111,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Handle goal deadline modal
       else if (clickedGoals) {
         try {
           lastViewedGoals = clickedGoals;
 
-          const content = `
-            <div class="max-h-[80vh] overflow-y-auto space-y-4 p-2">
-              ${lastViewedGoals.map(goal => `
-                <div class="p-4 bg-white border rounded-lg shadow space-y-2">
-                  <h3 class="text-xl font-bold text-yellow-700">${goal.name}</h3>
-                  <p class="text-sm text-gray-600">Deadline: ${goal.end_date.split('T')[0]}</p>
-                  <p class="text-gray-800">${goal.description || 'No description.'}</p>
-                  <div class="text-sm text-gray-700">
-                    ${goal.target_type ? `Target Type: ${goal.target_type}<br>` : ''}
-                    ${goal.target_field ? `Target Field: ${goal.target_field}<br>` : ''}
-                    ${goal.target_value ? `Target Value: ${goal.target_value}<br>` : ''}
-                    ${goal.exercise ? `Exercise: ${goal.exercise}` : ''}
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          `;
+          const container = document.createElement('div');
+          container.className = 'max-h-[80vh] overflow-y-auto space-y-4 p-2';
 
-          openModal(content, { title: 'Goal Deadlines', size: 'xl' });
+          lastViewedGoals.forEach(goal => {
+            const card = document.createElement('div');
+            card.innerHTML = renderGoalCard(goal, { showDelete: false });
+            container.appendChild(card);
+          });
+
+          openModal(container.outerHTML, { title: 'Goal Deadlines', size: 'xl' });
         } catch (err) {
-          console.error('Failed to fetch goal data:', err);
+          console.error('Failed to render goal cards:', err);
         }
       }
     }
@@ -205,7 +195,6 @@ document.addEventListener('click', async (e) => {
           ${lastSessionDetails
             .map(data => `
               <div class="bg-white p-4 shadow rounded-lg border space-y-4">
-                ${renderGoalsSection(data.goals)}
                 ${renderSessionDetails(data)}
               </div>
             `)
@@ -274,7 +263,6 @@ document.addEventListener('click', (e) => {
         ${lastSessionDetails
           .map(data => `
             <div class="bg-white p-4 shadow rounded-lg border space-y-4">
-              ${renderGoalsSection(data.goals)}
               ${renderSessionDetails(data)}
             </div>
           `)
@@ -285,27 +273,4 @@ document.addEventListener('click', (e) => {
   }
 });
 
-function renderGoalsSection(goals = []) {
-  if (!goals.length) return '';
 
-  return `
-    <div class="border rounded-lg shadow-sm bg-gray-50">
-      <div class="bg-blue-100 text-blue-800 px-4 py-2 rounded-t-lg">
-        <h3 class="text-md font-semibold uppercase tracking-wide">Session Goals</h3>
-      </div>
-      <div class="px-4 py-3 space-y-3">
-        ${goals.map(goal => `
-          <div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="font-semibold">${goal.name}</p>
-                <p class="text-sm text-gray-600">${goal.description || 'No description.'}</p>
-              </div>
-              <p class="text-xs text-gray-500">${goal.end_date?.split('T')[0] || ''}</p>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
-}

@@ -80,6 +80,8 @@ def get_session_details(session_id):
             "goal_type": g.goal_type.value,
             "exercise_type": g.exercise_type.value if g.exercise_type else None,
             "exercise_name": g.exercise_name,
+            "is_complete": g.is_complete,
+            "is_expired": g.is_expired,
             "targets": [
                 {
                     "target_metric": t.metric.value,

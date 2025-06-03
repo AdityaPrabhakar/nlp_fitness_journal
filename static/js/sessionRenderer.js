@@ -1,4 +1,29 @@
 export function renderSessionDetails(data) {
+  function renderGoalsSection(goals = []) {
+    if (!goals.length) return '';
+
+    return `
+      <div class="mt-2 mb-4">
+        <p class="font-semibold mb-2">Related Goals:</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          ${goals.map(goal => {
+            const bgColor = goal.is_complete
+              ? 'bg-green-100 border-green-300'
+              : goal.is_expired
+                ? 'bg-red-100 border-red-300'
+                : 'bg-white border-gray-200';
+
+            return `
+              <div class="${bgColor} p-3 rounded-lg border shadow-sm">
+                <p class="font-semibold text-sm">${goal.name}</p>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   const entriesHtml = data.entries.map(entry => {
     let html = `<div class="mb-4 border-b pb-4">`;
     if (entry.exercise) html += `<p><strong>Exercise:</strong> ${entry.exercise}</p>`;
@@ -24,20 +49,21 @@ export function renderSessionDetails(data) {
 
   return `
     <p class="mb-2"><strong>Date:</strong> ${data.date}</p>
-    <p class="mb-2 text-sm text-gray-500"><strong>Session ID:</strong> ${data.id}</p>
-    ${data.notes ? `<p class="mb-2"><strong>Session Notes:</strong> ${data.notes}</p>` : ''}
-    <div class="mb-4 p-3 bg-gray-100 rounded-md relative">
+      ${renderGoalsSection(data.goals)}
+      ${data.notes ? `<p class="mb-2"><strong>Session Notes:</strong> ${data.notes}</p>` : ''}
+      
       <p class="font-semibold mb-1">Journal Entry:</p>
-      <pre class="whitespace-pre-wrap text-sm text-gray-800">${data.raw_text}</pre>
-      <button 
-        class="absolute top-2 right-2 text-sm text-blue-600 hover:underline"
-        data-edit-journal
-        data-session-id="${data.id}" 
-        data-raw-text="${encodeURIComponent(data.raw_text)}"
-      >
-        Edit
-      </button>
-    </div>
+      <div class="mb-4 p-3 bg-gray-100 rounded-md relative">
+        <pre class="whitespace-pre-wrap text-sm text-gray-800">${data.raw_text}</pre>
+        <button 
+          class="absolute top-2 right-2 text-sm text-blue-600 hover:underline"
+          data-edit-journal
+          data-session-id="${data.id}" 
+          data-raw-text="${encodeURIComponent(data.raw_text)}"
+        >
+          Edit
+        </button>
+      </div>
     <div class="mt-4">${entriesHtml || '<p>No entries found.</p>'}</div>
     <div class="mt-6 text-right">
       <button
