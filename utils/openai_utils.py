@@ -26,7 +26,6 @@ def parse_workout_and_goals(text):
       - "by Friday": `start_date = today`, `end_date = the upcoming Friday`
     - If the time range is ambiguous but says something like “this week” or “this month”, infer a matching `end_date` by default
 
-
     ### Intent Detection Rules:
     - Treat sentences like “I want to…”, “I plan to…”, “I aim to…”, “I'd like to…”, “My goal is…”, “I’m hoping to…” as clear goal declarations
     - Convert any of these statements into a structured goal, even if no workout was logged
@@ -46,7 +45,7 @@ def parse_workout_and_goals(text):
     - "notes": optional per-exercise notes
     - For strength:
       - "sets_details": list of sets with "set_number", "reps", and "weight" (numeric, lbs only)
-+     - Only include "weight" if the user specified it
+      - Only include "weight" if the user specified it
     - For cardio:
       - "duration": in minutes
       - "distance": in miles
@@ -64,12 +63,7 @@ def parse_workout_and_goals(text):
     - "targets": list of objects, each with:
       - "target_metric": one of: "reps", "sets", "distance", "duration", "weight", "sessions", "pace"
       - "target_value": numeric only (American units)
-
-    Example:
-    "targets": [
-      {{ "target_metric": "weight", "target_value": 225 }},
-      {{ "target_metric": "reps", "target_value": 5 }}
-    ]
+      - Only include one of "duration" or "pace" per target. If "pace" is used, omit duration and distance.
 
     ### Goal Type Guidelines:
     - If a goal mentions repeating something "daily", "weekly", or similar, assume it means "in one day" or "in one week"
@@ -78,6 +72,12 @@ def parse_workout_and_goals(text):
       - The goal is **general or schedule-based**, such as “do cardio 5 times” or “work out 3 days a week”
     - Use `goal_type: "aggregate"` **only** for cumulative goals across multiple sessions, and **only** when the user clearly communicates this intent through specific language
     - Use `exercise_type: "general"` for non-exercise-specific goals such as “stay active every day” or “train 4 times a week”
+    - If a user says “run X miles in Y minutes”, convert it into a **pace-based goal** using:  
+      `pace = duration / distance` (in minutes per mile).  
+      In this case:
+        - Include both `pace` and `distance` targets  
+        - Do NOT include `duration`
+
 
     ### Normalization Rules:
     - Convert all distances to miles (1 km = 0.621371 miles)
@@ -137,6 +137,17 @@ def parse_workout_and_goals(text):
           "targets": [
             {{ "target_metric": "distance", "target_value": 10 }}
           ]
+        }},
+        {{
+          "name": "Sub-8:00 pace 3-miler",
+          "description": "Run 3 miles in 24 minutes (8:00/mile pace)",
+          "start_date": "2024-06-02",
+          "goal_type": "single_session",
+          "exercise_type": "cardio",
+          "exercise_name": "running",
+          "targets": [
+            {{ "target_metric": "pace", "target_value": 8.0 }}
+          ]
         }}
       ]
     }}
@@ -162,6 +173,7 @@ def parse_workout_and_goals(text):
 
     content = response.choices[0].message.content
     return json.loads(content)
+
 
 
 

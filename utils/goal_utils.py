@@ -31,7 +31,7 @@ def extract_metric_from_entries(entries, metric):
                 elif metric == MetricEnum.sets:
                     total += 1
                 elif metric == MetricEnum.weight:
-                    total += set_data.weight
+                    total = set_data.weight
         elif entry.type == 'cardio':
             cardio = entry.cardio_detail
             if cardio:
@@ -231,8 +231,12 @@ def evaluate_aggregate_goal(goal: Goal, sessions: list[WorkoutSession]):
     for target in goal.targets:
         total = extract_metric_from_entries(all_entries, target.metric)
 
-        if target.metric == 'pace':
-            is_complete = total <= target.value
+        if target.metric == MetricEnum.pace:
+            # Guard against invalid or missing pace values
+            if total > 0:
+                is_complete = total <= target.value
+            else:
+                is_complete = False
         else:
             is_complete = total >= target.value
 

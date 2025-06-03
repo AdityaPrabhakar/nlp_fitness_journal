@@ -28,14 +28,24 @@ async function fetchGoalsAndRender() {
     }
 
     data.forEach(goal => {
+      const latestProgress = goal.progress?.[goal.progress.length - 1];
+      const isGoalComplete = latestProgress?.is_complete;
+
       const card = document.createElement('div');
-      card.className = 'bg-white rounded shadow p-4';
+      card.className = `rounded shadow p-4 transition ${
+        isGoalComplete ? 'bg-green-50 border border-green-400' : 'bg-white'
+      }`;
+
       card.innerHTML = `
         <h2 class="text-xl font-semibold mb-1">${goal.name}</h2>
-        <p class="text-sm text-gray-500 mb-2">${goal.exercise_name || goal.exercise_type}</p>
+        <p class="text-sm text-gray-500 mb-1">
+          ${goal.exercise_name || goal.exercise_type} • 
+          <span class="italic text-xs">${goal.goal_type === 'single_session' ? 'Single Session Goal' : 'Aggregate Goal'}</span>
+        </p>
         ${renderAllProgress(goal)}
         <p class="text-xs text-gray-400 mt-2">From ${goal.start_date} to ${goal.end_date || 'ongoing'}</p>
       `;
+
       container.appendChild(card);
     });
 
@@ -53,19 +63,25 @@ function renderAllProgress(goal) {
 
   const progressByMetric = {};
   goal.progress.forEach(p => {
-    // Take the latest/most complete value (assuming aggregation)
-    if (!progressByMetric[p.metric] || p.value_achieved > progressByMetric[p.metric]) {
-      progressByMetric[p.metric] = p.value_achieved;
+    const m = p.metric;
+    // Update only if value is greater OR it's more recent
+    if (
+      !progressByMetric[m] ||
+      p.value_achieved > progressByMetric[m].total
+    ) {
+      progressByMetric[m] = {
+        total: p.value_achieved,
+        isComplete: p.is_complete
+      };
     }
   });
 
   let html = "";
   for (const metric in targetsByMetric) {
-    const total = progressByMetric[metric] || 0;
+    const { total = 0, isComplete = false } = progressByMetric[metric] || {};
     const target = targetsByMetric[metric];
 
     const useCheckbox = goal.goal_type === "single_session" || metric === "pace" || metric === "weight";
-    const direction = metric === "pace" ? "lower" : "higher";
 
     html += useCheckbox
       ? renderCheckboxProgress({
@@ -73,13 +89,14 @@ function renderAllProgress(goal) {
           total,
           target,
           units: getUnitsForMetric(metric),
-          direction
+          isComplete
         })
       : renderProgress({
           metric,
           total,
           target,
-          units: getUnitsForMetric(metric)
+          units: getUnitsForMetric(metric),
+          isComplete
         });
   }
 
@@ -104,16 +121,9 @@ function renderProgress(p) {
 }
 
 function renderCheckboxProgress(p) {
-  let isComplete;
-  if (p.direction === "lower") {
-    isComplete = p.total <= p.target;
-  } else {
-    isComplete = p.total >= p.target;
-  }
-
   return `
     <div class="mb-2 flex items-center space-x-2">
-      <input type="checkbox" ${isComplete ? 'checked' : ''} disabled class="accent-green-600 h-4 w-4">
+      <input type="checkbox" ${p.isComplete ? 'checked' : ''} disabled class="accent-green-600 h-4 w-4">
       <label class="text-sm font-medium">
         ${p.metric.toUpperCase()}: 
         ${p.metric === 'pace' ? `${p.target} ${p.units}` : `${p.total} / ${p.target} ${p.units}`}
@@ -121,6 +131,7 @@ function renderCheckboxProgress(p) {
     </div>
   `;
 }
+
 
 function getUnitsForMetric(metric) {
   return {
