@@ -3,6 +3,7 @@ import { renderSessionTable } from "./tables/sessionTable.js";
 import { renderCardioDetailedSessionsChart } from "./charts/cardio/cardioDetailedSessionsChart.js";
 import { renderCardioPrCharts } from "./charts/cardio/renderCardioPrCharts.js";
 import { renderCardioAiInsights, showLoadingCardioAiInsights } from "./charts/cardio/cardioAiInsights.js";
+import {renderGoalCard} from "./goalCard.js";
 
 // DOM elements
 const select = document.getElementById("exerciseSelect");
@@ -99,6 +100,27 @@ select.addEventListener("change", async () => {
 
     await renderSessionTable(exercise, startDate, endDate);
     await renderCardioDetailedSessionsChart(exercise, startDate, endDate);
+
+    // Fetch and render Exercise Goals using renderGoalCard
+    const goalsSection = document.getElementById("exerciseGoalsContainer");
+    goalsSection.innerHTML = "";
+
+    try {
+      const goalsRes = await authFetch(`/api/goals/with-progress?exercise=${encodeURIComponent(exercise)}`);
+      const goalsData = await goalsRes.json();
+
+      if (goalsData.length === 0) {
+        goalsSection.innerHTML = `<div class="text-gray-500 italic">No active goals for this exercise.</div>`;
+      } else {
+        goalsData.forEach(goal => {
+          const goalHTML = renderGoalCard(goal, { showDelete: false });
+          goalsSection.insertAdjacentHTML("beforeend", goalHTML);
+        });
+      }
+    } catch (err) {
+      console.error("[loadExerciseGoals] Failed:", err);
+      goalsSection.innerHTML = `<div class="text-red-500">Failed to load goals.</div>`;
+    }
 
     // ✅ AI insights for cardio
     showLoadingCardioAiInsights();

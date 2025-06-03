@@ -6,6 +6,7 @@ import { renderSessionTable } from "./tables/sessionTable.js";
 import { renderStrengthDetailedSessionsChart } from "./charts/strength/strengthDetailedSessionsChart.js";
 import { renderStrengthPrChart } from "./charts/strength/renderStrengthPrChart.js";
 import { renderAiInsights, showLoadingAiInsights } from "./charts/strength/strengthAiInsights.js";
+import {renderGoalCard} from "./goalCard.js";
 
 const select = document.getElementById("exerciseSelect");
 const startDateInput = document.getElementById("startDate");
@@ -106,6 +107,27 @@ select.addEventListener("change", async () => {
     await renderSessionTable(exercise, startDate, endDate);
     await renderStrengthDetailedSessionsChart(exercise, startDate, endDate);
 
+    // Fetch and render Exercise Goals using renderGoalCard
+    const goalsSection = document.getElementById("exerciseGoalsContainer");
+    goalsSection.innerHTML = "";
+
+    try {
+      const goalsRes = await authFetch(`/api/goals/with-progress?exercise=${encodeURIComponent(exercise)}`);
+      const goalsData = await goalsRes.json();
+
+      if (goalsData.length === 0) {
+        goalsSection.innerHTML = `<div class="text-gray-500 italic">No active goals for this exercise.</div>`;
+      } else {
+        goalsData.forEach(goal => {
+          const goalHTML = renderGoalCard(goal, { showDelete: false });
+          goalsSection.insertAdjacentHTML("beforeend", goalHTML);
+        });
+      }
+    } catch (err) {
+      console.error("[loadExerciseGoals] Failed:", err);
+      goalsSection.innerHTML = `<div class="text-red-500">Failed to load goals.</div>`;
+    }
+
     // AI insights
     showLoadingAiInsights();
     const aiRes = await authFetch(`/api/exercise-data/strength/ai-insights/${encodeURIComponent(exercise)}?${params}`);
@@ -115,7 +137,6 @@ select.addEventListener("change", async () => {
     if (currentToken === aiRequestToken) {
       renderAiInsights(aiData);
     }
-
   } catch (err) {
     console.error("[trend fetch] Failed:", err);
   }

@@ -54,22 +54,30 @@ def get_goal_progress(goal_id):
     return jsonify([serialize_progress(p) for p in progress])
 
 
-# --- Get Goals + All Targets + Progress ---
+# --- Get Goals + All Targets + Progress (Optionally Filtered by Exercise Name) ---
 @goal_bp.route("/api/goals/with-progress", methods=["GET"])
 @jwt_required()
 def get_goals_with_progress():
     user_id = get_jwt_identity()
+    exercise_name = request.args.get("exercise")
 
+    # Fetch all goals for the user
     goals = Goal.query.filter_by(user_id=user_id).all()
     result = []
 
     for g in goals:
+        # If filtering by exercise name, match against the goal's exercise_name
+        if exercise_name and g.exercise_name != exercise_name:
+            continue  # Skip goals not matching the exercise name
+
         data = serialize_goal(g)
         data["targets"] = [serialize_target(t) for t in g.targets]
         data["progress"] = [serialize_progress(p) for p in g.progress]
         result.append(data)
 
     return jsonify(result)
+
+
 
 # --- Delete a Goal ---
 @goal_bp.route("/api/goals/<int:goal_id>", methods=["DELETE"])
