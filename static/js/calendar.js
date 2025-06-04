@@ -1,4 +1,4 @@
-import { openModal, setupModalTriggers } from './modal.js';
+import {closeModal, openModal, setupModalTriggers} from './modal.js';
 import { renderSessionDetails } from './sessionRenderer.js';
 import { renderTrendCharts } from './renderTrendCharts.js';
 import { authFetch } from './auth/authFetch.js';
@@ -133,6 +133,105 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   calendar.render();
+
+  // Delete Session Handler
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-delete-session]');
+    if (!btn) return;
+
+    const sessionId = btn.getAttribute('data-session-id');
+
+    const confirmHtml = `
+      <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
+        <h2 class="text-lg font-semibold mb-4">Confirm Delete</h2>
+        <p class="mb-6 text-sm text-gray-600">Are you sure you want to delete this session? This action cannot be undone.</p>
+        <div class="flex justify-end space-x-2">
+          <button 
+            id="cancel-delete-session" 
+            class="px-4 py-2 text-sm rounded bg-gray-200 hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+          <button 
+            id="confirm-delete-session" 
+            data-session-id="${sessionId}" 
+            class="px-4 py-2 text-sm rounded bg-red-500 text-white hover:bg-red-600"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    `;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/40';
+    overlay.setAttribute('data-modal-overlay', '');
+
+    const modalWrapper = document.createElement('div');
+    modalWrapper.className = 'z-60';
+    modalWrapper.setAttribute('data-modal', '');
+    modalWrapper.innerHTML = confirmHtml;
+
+    overlay.appendChild(modalWrapper);
+    document.body.appendChild(overlay);
+  });
+
+
+  // Confirm Delete Action
+  document.addEventListener('click', async (e) => {
+    if (e.target.id !== 'confirm-delete-session') return;
+
+    const sessionId = e.target.getAttribute('data-session-id');
+
+    try {
+      const res = await authFetch(`/api/session/${sessionId}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) throw new Error('Failed to delete session.');
+
+      // Remove the modal and overlay
+      const modalOverlay = document.querySelector('[data-modal-overlay]');
+      if (modalOverlay) modalOverlay.remove();
+
+      const modal = document.querySelector('[data-modal]');
+      if (modal) modal.remove();
+
+      closeModal();
+
+      // Refresh the calendar or session list
+      calendar.refetchEvents();
+
+    } catch (err) {
+      console.error('Error deleting session:', err);
+      alert('Failed to delete session. Please try again.');
+    }
+  });
+
+
+  // Cancel Delete Handler
+  document.addEventListener('click', (e) => {
+    if (e.target.id === 'cancel-delete-session') {
+      const content = `
+        <div class="max-h-[80vh] overflow-y-auto pr-2 space-y-6">
+          ${lastSessionDetails
+            .map(data => `
+              <div class="bg-white p-4 shadow rounded-lg border space-y-4">
+                ${renderSessionDetails(data)}
+              </div>
+            `)
+            .join('')}
+        </div>
+      `;
+      // Remove the modal and overlay
+      const modalOverlay = document.querySelector('[data-modal-overlay]');
+      if (modalOverlay) modalOverlay.remove();
+
+      const modal = document.querySelector('[data-modal]');
+
+      openModal(content, { title: 'Workout Sessions', size: 'xl' });
+    }
+  });
 
   // Edit Journal Entry Handler
   document.addEventListener('click', (e) => {
@@ -272,5 +371,6 @@ document.addEventListener('click', (e) => {
     openModal(content, { title: 'Workout Sessions', size: 'xl' });
   }
 });
+
 
 

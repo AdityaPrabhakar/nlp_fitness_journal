@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, render_template, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.orm import joinedload
 
-from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry, Goal
+from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry, Goal, PersonalRecord
 from init import db
 
 session_bp = Blueprint('session', __name__)
@@ -179,3 +179,37 @@ def get_sessions_by_exercise():
             output.append(session_data)
 
     return jsonify(output)
+
+
+@session_bp.route("/api/session/<int:session_id>", methods=["DELETE"])
+@jwt_required()
+def delete_session(session_id):
+    user_id = get_jwt_identity()
+    session = WorkoutSession.query.filter_by(id=session_id, user_id=user_id).first()
+
+    if not session:
+        return jsonify({"error": "Session not found"}), 404
+
+    # Delete associated personal records (PRs) linked to this session
+    PersonalRecord.query.filter_by(session_id=session.id, user_id=user_id).delete()
+
+    # Delete associated workout entries and their children
+    for entry in session.entries:
+        if entry.type == "strength":
+            StrengthEntry.query.filter_by(entry_id=entry.id).delete()
+        elif entry.type == "cardio":
+            CardioEntry.query.filter_by(entry_id=entry.id).delete()
+        db.session.delete(entry)
+
+    # Delete all goals associated with this session (and their progress/targets)
+    goals = Goal.query.filter_by(session_id=session.id, user_id=user_id).all()
+    for goal in goals:
+        db.session.delete(goal)
+
+    # Delete the session itself
+    db.session.delete(session)
+    db.session.commit()
+
+    return jsonify({"message": f"Session {session_id} and all related data deleted successfully."}), 200
+
+

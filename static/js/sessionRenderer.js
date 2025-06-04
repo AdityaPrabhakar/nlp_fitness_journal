@@ -65,14 +65,21 @@ export function renderSessionDetails(data) {
         </button>
       </div>
     <div class="mt-4">${entriesHtml || '<p>No entries found.</p>'}</div>
-    <div class="mt-6 text-right">
-      <button
-        class="inline-block text-blue-700 hover:underline text-sm font-medium"
-        data-view-trends
-        data-session-id="${data.id}"
-      >
-        View Session Insights
-      </button>
-    </div>
+      <div class="mt-6 flex justify-end space-x-4">
+        <button
+          class="text-sm text-blue-700 hover:underline font-medium"
+          data-view-trends
+          data-session-id="${data.id}"
+        >
+          View Session Insights
+        </button>
+        <button
+          class="text-sm text-red-600 hover:underline font-medium"
+          data-delete-session
+          data-session-id="${data.id}"
+        >
+          Delete Session
+        </button>
+      </div>
   `;
 }
