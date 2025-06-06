@@ -1,25 +1,59 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-gradient-to-br from-blue-100 via-indigo-100 to-blue-50 text-gray-900">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}Fitness Journal{% endblock %}</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="{{ url_for('static', filename='js/auth/auth.js') }}"></script>
-    <style>
-        table {
-            border-collapse: collapse;
-            margin-top: 10px;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Fitness Journal{% endblock %}</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Font: Urbanist -->
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;800&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Auth Script -->
+  <script src="{{ url_for('static', filename='js/auth/auth.js') }}"></script>
+
+  <!-- Tailwind Config for Font -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Urbanist', 'ui-sans-serif', 'system-ui'],
+          }
         }
-        th, td {
-            padding: 6px 12px;
-            border: 1px solid #ccc;
-        }
-    </style>
+      }
+    }
+  </script>
+
+  <!-- Custom Table Styles -->
+  <style>
+    table {
+      border-collapse: collapse;
+      margin-top: 10px;
+      width: 100%;
+    }
+    th {
+      background-color: #dbeafe; /* blue-100 */
+      color: #1e3a8a; /* blue-900 */
+      font-weight: 600;
+    }
+    th, td {
+      padding: 10px 14px;
+      border: 1px solid #cbd5e1; /* slate-300 */
+    }
+  </style>
 </head>
-<body class="bg-gray-100">
+<body class="min-h-screen font-sans antialiased tracking-wide bg-transparent">
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
     {% block content %}{% endblock %}
-    {% block scripts %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -84,7 +84,18 @@ def parse_workout_and_goals(text):
     - Convert all weights to pounds (1 kg = 2.20462 lbs)
     - Durations must be in minutes
     - Remove units from final output
-    - Normalize exercise names (e.g. "dumbell press" → "dumbbell press", "benchpress" → "bench press", "pushups" → "push-ups")
+    
+    ### Exercise Normalization Guardrails:
+    - Normalize exercise names to a consistent form used across the dataset or app UI
+    - Common corrections:
+      - "pullup", "pull-up" → "pull-ups"
+      - "pushup", "push-up" → "push-ups"
+      - "benchpress" → "bench press"
+      - "dumbell" → "dumbbell"
+      - Singular/plural variants like "pull-up" and "pull-ups" must resolve to **"pull-ups"**
+    - Do NOT create variations such as "pull-up" and "pullups" as separate entries — they must all map to one canonical name (e.g., "pull-ups")
+    - Use consistent casing and hyphenation (e.g. always "push-ups", not "Pushups" or "Push ups")
+    - Apply these corrections **in both workout entries and goals**
 
     ### Rules:
     - Do NOT include goals inside the "entries" section

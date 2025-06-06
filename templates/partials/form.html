@@ -7,7 +7,13 @@
     {% include 'partials/modal.html' %}
     <h1 class="text-2xl font-bold mb-4 text-center">Log Your Workout</h1>
     <form id="logForm" class="text-center mt-6">
-      <textarea id="entryText" name="entry" rows="4" cols="50" placeholder="Describe your workout..." class="border rounded p-2"></textarea><br>
+    <textarea
+      id="entryText"
+      name="entry"
+      rows="16"
+      placeholder="Describe your workout or workout goals. Include weights, sets, reps, distance, duration, or any other notes!"
+      class="w-full min-h-[24rem] border border-gray-300 bg-gray-50 rounded-2xl shadow-inner p-5 text-base leading-relaxed focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y font-medium"
+    ></textarea>
       <button type="submit" class="bg-blue-500 text-white p-2 rounded mt-4">Log Workout</button>
     </form>
   </div>
