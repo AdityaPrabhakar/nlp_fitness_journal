@@ -5,7 +5,7 @@ class PersonalRecord(db.Model):
     __tablename__ = "personal_records"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     exercise = db.Column(db.String, nullable=False)
     type = db.Column(db.String, nullable=False)  # "strength" or "cardio"

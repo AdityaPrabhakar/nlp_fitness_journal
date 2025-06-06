@@ -5,7 +5,7 @@ class WorkoutSession(db.Model):
     __tablename__ = "workout_session"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     date = db.Column(db.String, nullable=False)  # Consider changing this to db.Date if you're using proper dates
     time = db.Column(db.Time, nullable=True)     # <-- NEW time field
