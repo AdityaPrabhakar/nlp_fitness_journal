@@ -13,11 +13,7 @@ class BaseConfig:
 
 class StandardConfig(BaseConfig):
     DEBUG = True
-    if os.getenv("FLASK_ENV") == "production":
-        SQLALCHEMY_DATABASE_URI = os.getenv("STANDARD_DATABASE_URL")
-    else:
-        SQLALCHEMY_DATABASE_URI = "sqlite:///database.db"
-
+    SQLALCHEMY_DATABASE_URI = os.getenv("STANDARD_DATABASE_URL", "sqlite:///database.db")
 
 class TestingConfig(BaseConfig):
     TESTING = True
