@@ -36,10 +36,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Group sessions by date
         const sessionsByDate = {};
         for (const session of sessions) {
-          if (!sessionsByDate[session.date]) {
-            sessionsByDate[session.date] = [];
+          const dateStr = new Date(session.date).toISOString().split('T')[0]; // force ISO string
+          if (!sessionsByDate[dateStr]) {
+            sessionsByDate[dateStr] = [];
           }
-          sessionsByDate[session.date].push(session.id);
+          sessionsByDate[dateStr].push(session.id);
         }
 
         const sessionEvents = Object.entries(sessionsByDate).map(([date, sessionIds]) => ({

@@ -33,7 +33,7 @@ def summary_overview():
 
     recent_session_ids = db.session.query(WorkoutSession.id).filter(
         WorkoutSession.user_id == user_id,
-        WorkoutSession.date >= start_date.isoformat()
+        WorkoutSession.date >= start_date
     ).all()
     recent_session_ids = {sid for (sid,) in recent_session_ids}
 
@@ -73,7 +73,7 @@ def cardio_summary():
         .join(CardioEntry, CardioEntry.entry_id == WorkoutEntry.id)
         .filter(
             WorkoutSession.user_id == user_id,
-            WorkoutSession.date >= start_date.isoformat()
+            WorkoutSession.date >= start_date
         )
         .group_by(WorkoutSession.date)
         .all()
@@ -125,7 +125,7 @@ def strength_summary():
         .join(StrengthEntry, StrengthEntry.entry_id == WorkoutEntry.id)
         .filter(
             WorkoutSession.user_id == user_id,
-            WorkoutSession.date >= start_date.isoformat()
+            WorkoutSession.date >= start_date
         )
         .group_by(WorkoutEntry.exercise)
         .all()
@@ -164,7 +164,7 @@ def pr_summary():
         .join(WorkoutSession, WorkoutSession.id == PersonalRecord.session_id)
         .filter(
             WorkoutSession.user_id == user_id,
-            WorkoutSession.date >= start_date.isoformat()
+            WorkoutSession.date >= start_date
         )
         .order_by(WorkoutSession.date.desc())
         .all()
@@ -178,7 +178,7 @@ def pr_summary():
             "value": pr.value,
             "units": pr.units,  # Include units in JSON
             "session_id": pr.session_id,
-            "date": pr.date.format()  # Use isoformat for safe serialization
+            "date": pr.date.isoformat()  # Use isoformat for safe serialization
         }
         for pr in prs
     ]

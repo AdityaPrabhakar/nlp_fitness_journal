@@ -83,7 +83,7 @@ def workout_trends(session_id):
 
             grouped_history = defaultdict(list)
             for date, notes, set_number, reps, weight in historical_sets:
-                key = (date.format(), notes or "")
+                key = (date.isoformat(), notes or "")
                 grouped_history[key].append({
                     "set_number": set_number,
                     "reps": reps,
@@ -144,7 +144,7 @@ def workout_trends(session_id):
 
                 grouped_history = {}
                 for date, notes, distance, duration, hist_pace in historical_cardio:
-                    key = (date.format(), notes or "")
+                    key = (date.isoformat(), notes or "")
                     grouped_history[key] = {
                         "distance": distance,
                         "duration": duration,
@@ -172,7 +172,7 @@ def workout_trends(session_id):
                 })
 
     return jsonify({
-        "session_date": session.date.format(),
+        "session_date": session.date.isoformat(),
         "strength": strength_result,
         "cardio": cardio_result
     })

@@ -81,7 +81,7 @@ def strength_1rm_trend(exercise):
         if max_1rm:
             trend.append({
                 "session_id": session.id,
-                "date": session.date.format(),
+                "date": session.date.isoformat(),
                 "estimated_1rm": round(max_1rm, 2)
             })
 
@@ -122,7 +122,7 @@ def strength_volume_trend(exercise):
                 total_volume += reps * weight
         if total_volume > 0:
             trend.append({
-                "date": session.date.format(),
+                "date": session.date.isoformat(),
                 "volume": round(total_volume, 2)
             })
 
@@ -198,7 +198,7 @@ def get_relative_intensity(exercise_name):
 
         results.append({
             "set_number": s["set_number"],
-            "date": s["date"].format(),
+            "date": s["date"].isoformat(),
             "weight": s["weight"],
             "reps": s["reps"],
             "estimated_1rm": round(s["estimated_1rm"], 1),
@@ -249,7 +249,7 @@ def suggest_next_set(exercise_name):
             "session_id": session_id,
             "set_number": set_number,
             "reps": reps or DEFAULT_REPS,
-            "date": date.format()
+            "date": date.isoformat()
         }
         if weight and weight > 0:
             set_info["weight"] = weight  # only include weight if explicitly provided
@@ -310,7 +310,7 @@ def suggest_next_cardio_session(exercise_name):
             "duration": dur,
             "distance": dist,
             "pace": pace,
-            "date": date.format()
+            "date": date.isoformat()
         })
 
     return jsonify(recommend_followup_cardio(exercise_name, session_data, goal=goal))

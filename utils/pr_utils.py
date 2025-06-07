@@ -7,7 +7,7 @@ def track_prs_for_session(session, entries):
     user_id = session.user_id
 
     # Combine date and time into a single datetime object
-    session_date_obj = datetime.strptime(session.date, "%Y-%m-%d").date()
+    session_date_obj = session.date
     session_datetime = datetime.combine(session_date_obj, session.time)
 
     for entry in entries:
@@ -72,7 +72,7 @@ def update_pr_record(user_id, exercise, type_, field, current_value, current_ses
         if not s or not s.date:
             continue
         try:
-            session_date = datetime.strptime(s.date, "%Y-%m-%d").date()
+            session_date = s.date
             if s.time:
                 s_datetime = datetime.combine(session_date, s.time)
                 if s_datetime < session_datetime:

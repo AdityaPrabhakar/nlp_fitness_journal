@@ -1,7 +1,7 @@
 from flask import Blueprint, request, render_template, jsonify
 from datetime import datetime
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import and_
+from sqlalchemy import and_, Date
 
 from models import WorkoutSession, WorkoutEntry, StrengthEntry, CardioEntry, PersonalRecord, User
 from models.goal import Goal, GoalTypeEnum, RepeatIntervalEnum, ExerciseTypeEnum, MetricEnum, GoalTarget
@@ -149,14 +149,16 @@ def process_goals_for_session(goals, user_id, session, allow_same_session_duplic
 def log_workout():
     user_id = get_jwt_identity()
     raw_text = request.form.get("entry") or request.json.get("entry")
-    today_date = datetime.now().strftime("%Y-%m-%d")
+    today_date = datetime.now().date()
 
     try:
         structured_response = parse_workout_and_goals(raw_text)
         entries = structured_response.get("entries", [])
         goals = structured_response.get("goals", [])
         notes = structured_response.get("notes", "")
-        parsed_date = structured_response.get("date")
+        date_str = structured_response.get("date")
+        parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
+        print(type(parsed_date))
         valid_entries = [e for e in clean_entries(entries) if "exercise" in e]
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
@@ -188,7 +190,7 @@ def log_workout():
         "success": True,
         "message": "Workout entry created successfully!" if valid_entries else "Workout session created (notes only)",
         "session_id": session.id,
-        "session_date": session.date.format(),
+        "session_date": session.date.isoformat(),
         "raw_text": raw_text,
         "new_prs": new_prs,
         "goals_added": len(added_goals),
@@ -214,7 +216,8 @@ def edit_workout(session_id):
         entries = structured_response.get("entries", [])
         goals = structured_response.get("goals", [])
         notes = structured_response.get("notes", "")
-        parsed_date = structured_response.get("date")
+        date_str = structured_response.get("date")
+        parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
         cleaned_entries = clean_entries(entries)
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
@@ -257,7 +260,7 @@ def edit_workout(session_id):
         "success": True,
         "message": "Workout session updated successfully.",
         "session_id": session.id,
-        "session_date": session.date.format(),
+        "session_date": session.date.isoformat(),
         "raw_text": raw_text,
         "new_prs": new_prs,
         "goals_added": len(added_goals),

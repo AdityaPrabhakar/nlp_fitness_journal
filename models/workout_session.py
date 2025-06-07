@@ -7,7 +7,7 @@ class WorkoutSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
-    date = db.Column(db.String, nullable=False)  # Consider changing this to db.Date if you're using proper dates
+    date = db.Column(db.Date, nullable=False)
     time = db.Column(db.Time, nullable=True)     # <-- NEW time field
 
     raw_text = db.Column(db.Text, nullable=False)
