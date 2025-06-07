@@ -18,6 +18,7 @@ def create_app(config_class):
     jwt.init_app(app)  # Step 2: Initialize JWTManager with app
 
     with app.app_context():
+        db.drop_all()
         db.create_all()
 
     return app
