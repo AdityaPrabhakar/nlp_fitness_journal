@@ -67,6 +67,7 @@ def parse_workout_and_goals(text):
 
     ### Goal Type Guidelines:
     - If a goal mentions repeating something "daily", "weekly", or similar, assume it means "in one day" or "in one week"
+    - If a goal mentions "tomorrow", assume it means "by the end of tomorrow" and ensure an end_date is set
     - Default to `goal_type: "single_session"` unless **one of the following is clearly true**:
       - The user explicitly states a **total or combined amount over time**, using words like “total”, “combined”, “cumulative”, or similar
       - The goal is **general or schedule-based**, such as “do cardio 5 times” or “work out 3 days a week”
