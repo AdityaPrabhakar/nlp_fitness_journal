@@ -33,7 +33,7 @@ def summary_overview():
 
     recent_session_ids = db.session.query(WorkoutSession.id).filter(
         WorkoutSession.user_id == user_id,
-        WorkoutSession.date >= start_date
+        WorkoutSession.date >= start_date.isoformat()
     ).all()
     recent_session_ids = {sid for (sid,) in recent_session_ids}
 
@@ -73,7 +73,7 @@ def cardio_summary():
         .join(CardioEntry, CardioEntry.entry_id == WorkoutEntry.id)
         .filter(
             WorkoutSession.user_id == user_id,
-            WorkoutSession.date >= start_date
+            WorkoutSession.date >= start_date.isoformat()
         )
         .group_by(WorkoutSession.date)
         .all()
@@ -125,7 +125,7 @@ def strength_summary():
         .join(StrengthEntry, StrengthEntry.entry_id == WorkoutEntry.id)
         .filter(
             WorkoutSession.user_id == user_id,
-            WorkoutSession.date >= start_date
+            WorkoutSession.date >= start_date.isoformat()
         )
         .group_by(WorkoutEntry.exercise)
         .all()
@@ -164,7 +164,7 @@ def pr_summary():
         .join(WorkoutSession, WorkoutSession.id == PersonalRecord.session_id)
         .filter(
             WorkoutSession.user_id == user_id,
-            WorkoutSession.date >= start_date
+            WorkoutSession.date >= start_date.isoformat()
         )
         .order_by(WorkoutSession.date.desc())
         .all()
