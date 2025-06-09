@@ -1,13 +1,13 @@
 import json
 from openai import OpenAI
-from datetime import date
+from datetime import date, datetime
 
 client = OpenAI()
 
 
 # noinspection PyTypeChecker
 def parse_workout_and_goals(text):
-    today = date.today().isoformat()
+    today = datetime.now().date().isoformat()
 
     prompt = f"""
     You are a fitness assistant. A user will describe their workout and goals in natural language.

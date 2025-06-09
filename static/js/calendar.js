@@ -319,9 +319,13 @@ document.addEventListener('click', async (e) => {
 
   try {
     const session = lastSessionDetails.find(s => s.id === sessionId);
-    const sessionDate = session?.date?.split?.('T')?.[0] || new Date().toISOString().slice(0, 10);
+    const rawDate = session?.date;
+    const sessionDate = rawDate
+      ? new Date(rawDate).toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10);
 
-    const res = await authFetch(`/api/workout-trends/${sessionId}?date=${sessionDate}&count=5`);
+const res = await authFetch(`/api/workout-trends/${sessionId}?date=${sessionDate}&count=5`);
+
     const data = await res.json();
 
     const hasCharts = data && (
