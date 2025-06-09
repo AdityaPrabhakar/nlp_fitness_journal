@@ -40,11 +40,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       console.log('[API] Sending POST to /api/log-workout...');
-      const response = await authFetch('/api/log-workout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entry: entryText })
-      });
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    const response = await authFetch('/api/log-workout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        entry: entryText,
+        timezone: timeZone  // e.g., "America/Los_Angeles"
+      })
+    });
+
 
       const result = await response.json();
       console.log('[API] Received response from /api/log-workout:', result);

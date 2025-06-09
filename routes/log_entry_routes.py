@@ -9,6 +9,11 @@ from utils import track_prs_for_session, evaluate_goal
 from utils.openai_utils import clean_entries, parse_workout_and_goals
 from init import db
 
+try:
+    from zoneinfo import ZoneInfo  # Python 3.9+
+except ImportError:
+    from pytz import timezone as ZoneInfo  # fallback if using older version
+
 log_entry_bp = Blueprint("log_entry", __name__)
 
 @log_entry_bp.route("/", methods=["GET"])
@@ -149,7 +154,16 @@ def process_goals_for_session(goals, user_id, session, allow_same_session_duplic
 def log_workout():
     user_id = get_jwt_identity()
     raw_text = request.form.get("entry") or request.json.get("entry")
-    today_date = datetime.now().date()
+    data = request.get_json() or request.form
+    tz_str = data.get("timezone", "UTC")  # Default to UTC if not provided
+
+    # Localize 'now' to user's timezone
+    try:
+        user_now = datetime.now(ZoneInfo(tz_str))
+    except Exception:
+        user_now = datetime.utcnow()
+
+    today_date = user_now.date()
 
     try:
         structured_response = parse_workout_and_goals(raw_text)

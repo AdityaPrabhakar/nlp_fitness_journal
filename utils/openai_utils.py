@@ -8,10 +8,8 @@ client = OpenAI()
 
 
 # noinspection PyTypeChecker
-def parse_workout_and_goals(text):
-    pst = pytz.timezone("America/Los_Angeles")
-    pst_now = datetime.now(pst)
-    today = pst_now.date().isoformat()
+def parse_workout_and_goals(text, today_override=None):
+    today = today_override or datetime.now().date().isoformat()
 
     prompt = f"""
     You are a fitness assistant. A user will describe their workout and goals in natural language.
