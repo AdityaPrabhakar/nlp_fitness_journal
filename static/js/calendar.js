@@ -8,6 +8,20 @@ let lastViewedSessionIds = [];
 let lastSessionDetails = [];
 let lastViewedGoals = [];
 
+function showEditingWorkoutSummary() {
+  console.log('[Modal] Showing loading workout summary modal...');
+  const modalContent = `
+    <div class="p-6 text-center space-y-4">
+      <svg class="animate-spin h-6 w-6 mx-auto text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+      </svg>
+      <p class="text-gray-700 text-sm">Editing entry and re-generating session data...</p>
+    </div>
+  `;
+  openModal(modalContent, { title: 'Logging Workout...', size: 'xl' });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   setupModalTriggers();
 
@@ -269,6 +283,8 @@ document.addEventListener('click', async (e) => {
   if (saveBtn) {
     const sessionId = saveBtn.getAttribute('data-session-id');
     const newText = document.getElementById('edit-raw-text').value.trim();
+
+    showEditingWorkoutSummary();
 
     try {
       const res = await authFetch(`/api/edit-workout/${sessionId}`, {
