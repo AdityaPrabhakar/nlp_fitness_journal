@@ -47,8 +47,16 @@ export function renderSessionDetails(data) {
     return html;
   }).join('');
 
+  const rawDate = new Date(data.date);
+  const formattedDate = rawDate.toLocaleDateString(undefined, {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+
   return `
-    <p class="mb-2"><strong>Date:</strong> ${data.date}</p>
+    <p class="mb-2"><strong>Date:</strong> ${formattedDate}</p>
       ${renderGoalsSection(data.goals)}
       ${data.notes ? `<p class="mb-2"><strong>Session Notes:</strong> ${data.notes}</p>` : ''}
       
